@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<title>Video List</title>
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<body>
+  <div class="w3-container w3-blue w3-bottombar ">
+      <header class="w3-container w3-blue w3-responsive">
+             <h1 class="w3-center">GoTube<img src="./static/GoTube32x32.png"></h1>
+      </header>
+  </div>
+<div class="w3-center w3-bar w3-blue w3-bottombar">
+  <a href="/lst" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Video List</a>
+  <a href="/" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Upload Video</a>
+  <a href="/queque" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Processing Queque status</a>
+</div>
+
+<table class="w3-table w3-striped w3-bordered w3-margin w3-center">
+  <tr>
+    <th>Video:</th>
+  </tr>
+{{if .FileNames}}
+        {{range .FileNames}}
+                <tr><td><a href='./vp?videoname={{.}}'>{{.}}</a></td><tr>
+        {{end}}
+{{else}}
+<p><tr><td>No files found.</td></tr></p>
+{{end}}
+</table>
+      <footer class="w3-container w3-blue w3-responsive">
+        <h5> </h5>
+      </footer>
+</body>
+</html>
