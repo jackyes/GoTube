@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Error!</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <script src="./static/script.js"></script>
+  </head>
+  <body>
+  <div class="w3-container w3-blue w3-bottombar ">
+      <header class="w3-container w3-blue w3-responsive">
+             <h1 class="w3-center">GoTube<img src="./static/GoTube32x32.png"></h1>
+      </header>
+  </div>
+
+
+<div class="w3-center w3-bar w3-blue w3-bottombar">
+  <a href="/lst" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Video List</a>
+  <a href="/" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Upload Video</a>
+  <a href="/queque" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Processing Queque status</a>
+</div>
+      <div class="w3-container w3-responsive">
+        <h2>{{.ErrMsg}}</h2>
+      </div>
+      <footer class="w3-container w3-blue w3-responsive">
+        <h5> </h5>
+      </footer>
+    </div>
+  </body>
+</html>
