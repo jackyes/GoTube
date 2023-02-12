@@ -246,35 +246,41 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	wg.Add(6)
 
 	go func() {
+                //convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
+                //convert video, with audio for fallback reprodution
 		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
+                //convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedMedPath, AppConfig.CrfMed, AppConfig.VideoResMed, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
+                //convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedHighPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, false}
+                //conert audio for mpd
+		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, true, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
         go func() {
+                //create thumbnail
 		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, true}
 		defer wg.Done()
 	}()
 	wg.Wait()
-
+                //create mpd
 	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", true, filenamenoext, false}
 }
 
