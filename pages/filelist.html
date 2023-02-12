@@ -21,8 +21,7 @@
 {{if .FileNames}}
         {{range .FileNames}}
                 <tr><td>
-                <img src="/converted/{{.}}/output.jpeg" alt="{{.}} Thumbnail" width="320" height="240"><br>
-                <a href='./vp?videoname={{.}}'>{{.}}</a>
+                <a href='./vp?videoname={{.}}'><img src="/converted/{{.}}/output.jpeg" alt="{{.}} Thumbnail" width="320" height="240">{{.}}</a><br>
                 </td><tr>
         {{end}}
 {{else}}
