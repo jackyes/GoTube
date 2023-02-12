@@ -46,7 +46,7 @@ type Cfg struct {
 
 var (
 	AppConfig      Cfg
-	safeFileName   = regexp.MustCompile("^[a-zA-Z0-9_.-]+$")
+	safeFileName   = regexp.MustCompile("^[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)*$")
 	videosUploaded int
 	quequelen      int = 0
 	templatefl         = template.Must(template.ParseFiles("pages/filelist.html"))
