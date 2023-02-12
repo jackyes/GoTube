@@ -46,7 +46,7 @@ type Cfg struct {
 
 var (
 	AppConfig      Cfg
-	safeFileName   = regexp.MustCompile("^[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)*$")
+	safeFileName   = regexp.MustCompile("^[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_]+)*$")
 	videosUploaded int
 	quequelen      int = 0
 	templatefl         = template.Must(template.ParseFiles("pages/filelist.html"))
@@ -242,18 +242,24 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 		channelOpen = true
 	}
 	var wg sync.WaitGroup
+        var wglowqualityconv sync.WaitGroup
+        wglowqualityconv.Add(2) //convert low quality and create thumbnail befor all other conversion, so as soon as possible a low quailty video can be played
+	wg.Add(4)
 
-	wg.Add(6)
-
+        go func() {
+                //convert video, with audio for fallback reprodution
+		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext, false}
+		defer wglowqualityconv.Done()
+	}()
+        go func() {
+                //create thumbnail
+		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, true}
+		defer wglowqualityconv.Done()
+	}()
+        wglowqualityconv.Wait()
 	go func() {
                 //convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", false, false, "64k", false, filenamenoext, false}
-		defer wg.Done()
-	}()
-
-	go func() {
-                //convert video, with audio for fallback reprodution
-		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
@@ -270,15 +276,11 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	}()
 
 	go func() {
-                //conert audio for mpd
+                //convert audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, true, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
-        go func() {
-                //create thumbnail
-		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, true}
-		defer wg.Done()
-	}()
+
 	wg.Wait()
                 //create mpd
 	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", true, filenamenoext, false}
