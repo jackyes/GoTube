@@ -77,6 +77,7 @@ type VideoParams struct {
 	audioquality string
 	creatempd    bool
 	videoName    string
+        createThunb  bool
 }
 
 type PageList struct {
@@ -227,13 +228,14 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	ConvertedMedPath := filepath.Join(ConvertPath+"/"+filenamenoext, "med_"+filenamenoext+".webm")
 	ConvertedHighPath := filepath.Join(ConvertPath+"/"+filenamenoext, "high_"+filenamenoext+".webm")
 	ConvertedAudioPath := filepath.Join(ConvertPath+"/"+filenamenoext, "audio_"+filenamenoext+".webm")
+        Thumbpath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.jpeg")
 	MPDPath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.mpd")
 	err := os.Mkdir(ConvertPath+"/"+filenamenoext, 0755)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	quequelen += 6
+	quequelen += 7
 
 	if !channelOpen {
 		go convertVideo(videoQuality)
@@ -241,35 +243,39 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	}
 	var wg sync.WaitGroup
 
-	wg.Add(5)
+	wg.Add(6)
 
 	go func() {
-		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", false, false, "64k", false, filenamenoext}
+		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext}
+		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-		videoQuality <- VideoParams{filePath, ConvertedMedPath, AppConfig.CrfMed, AppConfig.VideoResMed, "-1", false, false, "64k", false, filenamenoext}
+		videoQuality <- VideoParams{filePath, ConvertedMedPath, AppConfig.CrfMed, AppConfig.VideoResMed, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-		videoQuality <- VideoParams{filePath, ConvertedHighPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext}
+		videoQuality <- VideoParams{filePath, ConvertedHighPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, true, "64k", false, filenamenoext}
+		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, false}
+		defer wg.Done()
+	}()
+        go func() {
+		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, true}
 		defer wg.Done()
 	}()
 	wg.Wait()
 
-	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", true, filenamenoext}
+	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", true, filenamenoext, false}
 }
 
 func convertVideo(videoQuality chan VideoParams) {
@@ -282,7 +288,16 @@ func convertVideo(videoQuality chan VideoParams) {
 			}
 			fmt.Printf("%s converted to %s resolution %sx%s with audio\n", params.videoPath, params.quality, params.width, params.height)
 			quequelen--
-		} else if params.processaudio {
+                } else if params.createThunb {
+                        cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
+			err := cmd.Run()
+			if err != nil {
+				fmt.Println("Error converting thumbnail:", err)
+			}
+			fmt.Printf("%s thumbnail created\n", params.videoPath)
+			quequelen--
+                        
+                } else if params.processaudio {
 			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "webm", params.ConvertPath)
 			err4 := cmd4.Run()
 			if err4 != nil {
