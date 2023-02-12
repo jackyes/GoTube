@@ -20,7 +20,10 @@
   </tr>
 {{if .FileNames}}
         {{range .FileNames}}
-                <tr><td><a href='./vp?videoname={{.}}'>{{.}}</a></td><tr>
+                <tr><td>
+                <img src="/converted/{{.}}/output.jpeg" alt="{{.}} Thumbnail" width="320" height="240"><br>
+                <a href='./vp?videoname={{.}}'>{{.}}</a>
+                </td><tr>
         {{end}}
 {{else}}
 <p><tr><td>No files found.</td></tr></p>
