@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -150,11 +151,16 @@ func quequesize(w http.ResponseWriter, r *http.Request) {
 
 func listFiles(w http.ResponseWriter, r *http.Request) {
 	folder := "uploads"
-	files, err := os.ReadDir(folder)
+	files, err := ioutil.ReadDir(folder)
 	if err != nil {
 		senderror(w, r, err.Error())
 		return
 	}
+
+	// Sort files based on most recent modification date.
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().After(files[j].ModTime())
+	})
 
 	fileLinks := make([]string, 0, len(files))
 	for _, file := range files {
@@ -167,6 +173,7 @@ func listFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	renderTemplate(w, "filelist", p)
 }
+
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("video")
@@ -195,11 +202,16 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	videosUploaded++
-
 	extension := path.Ext(filename)
 	filenamenoext := strings.TrimSuffix(filename, extension)
 	filePath := filepath.Join(AppConfig.UploadPath, filename)
+        // Check if the file already exists
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		errormsg = "File already exists: " + filename
+		senderror(w, r, errormsg)
+		return
+	}
+
 	out, err := os.Create(filePath)
 	if err != nil {
 		senderror(w, r, err.Error())
@@ -207,6 +219,8 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer out.Close()
 
+	videosUploaded++
+        
 	_, err = io.Copy(out, file)
 	if err != nil {
 		senderror(w, r, err.Error())
