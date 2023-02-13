@@ -18,3 +18,4 @@ EnableFDP: true #Enable file deletion after x day
 EnablePHL: true #Enable upload limit per h
 UploadPath: "./uploads"
 ConvertPath: "./converted"
+CheckOldEvery: "1h" #wait time before recheck  file deletion policies
