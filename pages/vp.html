@@ -11,15 +11,13 @@
              <h1 class="w3-center">GoTube<img src="./static/GoTube32x32.png"></h1>
       </header>
   </div>
-
-
 <div class="w3-center w3-bar w3-blue w3-bottombar">
   <a href="/lst" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Video List</a>
   <a href="/" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Upload Video</a>
   <a href="/queque" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Processing Queque status</a>
 </div>
       <div class="w3-container w3-responsive">
-        <video class="w3-video w3-center" style="width: 100%; height: auto; max-width: 800px; max-height: 600px;" id="videoPlayer" src="/converted/{{.VidNm}}/low_{{.VidNm}}_audio.webm"  controls type="video/webm"></video>
+        <video class="w3-video w3-center" poster="/converted/{{.VidNm}}/output.jpeg" style="width: 100%; height: auto; max-width: 800px; max-height: 600px;" id="videoPlayer" src="/converted/{{.VidNm}}/low_{{.VidNm}}_audio.webm"  controls type="video/webm"></video>
       </div>
           <script src="/static/dash.all.min.js"></script>
           <script>
