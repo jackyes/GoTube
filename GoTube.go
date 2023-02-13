@@ -43,10 +43,12 @@ type Cfg struct {
 	CrfHigh          string `yaml:"CrfHigh"`
 	UploadPath       string `yaml:"UploadPath"`
 	ConvertPath      string `yaml:"ConvertPath"`
+	checkOldEvery    string `yaml:"checkOldEvery"`
 }
 
 var (
 	AppConfig      Cfg
+	checkOldEvery  = time.Hour //wait time before recheck  file deletion policies
 	safeFileName   = regexp.MustCompile("^[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_]+)*$")
 	videosUploaded int
 	quequelen      int = 0
@@ -60,11 +62,10 @@ var (
 )
 
 const (
-	configPath    = "./config.yaml"
-	checkOldEvery = time.Hour //wait time before recheck  file deletion policies
-	staticPath    = "./static"
-	faviconPath   = "./static/favicon.ico"
-	sendfilePath  = "./static/sendfile.html"
+	configPath   = "./config.yaml"
+	staticPath   = "./static"
+	faviconPath  = "./static/favicon.ico"
+	sendfilePath = "./static/sendfile.html"
 )
 
 type VideoParams struct {
@@ -78,7 +79,7 @@ type VideoParams struct {
 	audioquality string
 	creatempd    bool
 	videoName    string
-        createThunb  bool
+	createThunb  bool
 }
 
 type PageList struct {
@@ -103,9 +104,17 @@ type PageErr struct {
 
 func main() {
 	ReadConfig()
+
 	if AppConfig.EnableFDP {
 		go deleteOLD()
 	}
+	d, err := time.ParseDuration(AppConfig.checkOldEvery)
+	if err != nil {
+		fmt.Println("Error parsing checkOldEvery from config.yaml. Usind default value (1h)")
+		d = time.Hour
+	}
+	checkOldEvery = d
+
 	go resetVideoUploadedCounter()
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/video", handleVideo)
@@ -174,7 +183,6 @@ func listFiles(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "filelist", p)
 }
 
-
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("video")
 	var errormsg string
@@ -205,7 +213,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	extension := path.Ext(filename)
 	filenamenoext := strings.TrimSuffix(filename, extension)
 	filePath := filepath.Join(AppConfig.UploadPath, filename)
-        // Check if the file already exists
+	// Check if the file already exists
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		errormsg = "File already exists: " + filename
 		senderror(w, r, errormsg)
@@ -220,7 +228,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	defer out.Close()
 
 	videosUploaded++
-        
+
 	_, err = io.Copy(out, file)
 	if err != nil {
 		senderror(w, r, err.Error())
@@ -242,7 +250,7 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	ConvertedMedPath := filepath.Join(ConvertPath+"/"+filenamenoext, "med_"+filenamenoext+".webm")
 	ConvertedHighPath := filepath.Join(ConvertPath+"/"+filenamenoext, "high_"+filenamenoext+".webm")
 	ConvertedAudioPath := filepath.Join(ConvertPath+"/"+filenamenoext, "audio_"+filenamenoext+".webm")
-        Thumbpath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.jpeg")
+	Thumbpath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.jpeg")
 	MPDPath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.mpd")
 	err := os.Mkdir(ConvertPath+"/"+filenamenoext, 0755)
 	if err != nil {
@@ -256,47 +264,47 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 		channelOpen = true
 	}
 	var wg sync.WaitGroup
-        var wglowqualityconv sync.WaitGroup
-        wglowqualityconv.Add(2) //convert low quality and create thumbnail befor all other conversion, so as soon as possible a low quailty video can be played
+	var wglowqualityconv sync.WaitGroup
+	wglowqualityconv.Add(2) //convert low quality and create thumbnail befor all other conversion, so as soon as possible a low quailty video can be played
 	wg.Add(4)
 
-        go func() {
-                //convert video, with audio for fallback reprodution
+	go func() {
+		//convert video, with audio for fallback reprodution
 		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext, false}
 		defer wglowqualityconv.Done()
 	}()
-        go func() {
-                //create thumbnail
+	go func() {
+		//create thumbnail
 		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, true}
 		defer wglowqualityconv.Done()
 	}()
-        wglowqualityconv.Wait()
+	wglowqualityconv.Wait()
 	go func() {
-                //convert video, no audio for mpd
+		//convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-                //convert video, no audio for mpd
+		//convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedMedPath, AppConfig.CrfMed, AppConfig.VideoResMed, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-                //convert video, no audio for mpd
+		//convert video, no audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedHighPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
-                //convert audio for mpd
+		//convert audio for mpd
 		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, true, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	wg.Wait()
-                //create mpd
+	//create mpd
 	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", true, filenamenoext, false}
 }
 
@@ -310,16 +318,16 @@ func convertVideo(videoQuality chan VideoParams) {
 			}
 			fmt.Printf("%s converted to %s resolution %sx%s with audio\n", params.videoPath, params.quality, params.width, params.height)
 			quequelen--
-                } else if params.createThunb {
-                        cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
+		} else if params.createThunb {
+			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting thumbnail:", err)
 			}
 			fmt.Printf("%s thumbnail created\n", params.videoPath)
 			quequelen--
-                        
-                } else if params.processaudio {
+
+		} else if params.processaudio {
 			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "webm", params.ConvertPath)
 			err4 := cmd4.Run()
 			if err4 != nil {
