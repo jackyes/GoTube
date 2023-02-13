@@ -43,7 +43,7 @@ type Cfg struct {
 	CrfHigh          string `yaml:"CrfHigh"`
 	UploadPath       string `yaml:"UploadPath"`
 	ConvertPath      string `yaml:"ConvertPath"`
-	checkOldEvery    string `yaml:"checkOldEvery"`
+	CheckOldEvery    string `yaml:"CheckOldEvery"`
 }
 
 var (
@@ -108,9 +108,9 @@ func main() {
 	if AppConfig.EnableFDP {
 		go deleteOLD()
 	}
-	d, err := time.ParseDuration(AppConfig.checkOldEvery)
+	d, err := time.ParseDuration(AppConfig.CheckOldEvery)
 	if err != nil {
-		fmt.Println("Error parsing checkOldEvery from config.yaml. Usind default value (1h)")
+		fmt.Println("Error parsing CheckOldEvery from config.yaml. Using default value (1h)", err)
 		d = time.Hour
 	}
 	checkOldEvery = d
