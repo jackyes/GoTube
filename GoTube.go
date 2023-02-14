@@ -56,6 +56,7 @@ var (
 	templateq          = template.Must(template.ParseFiles("pages/queque.html"))
 	templateupl        = template.Must(template.ParseFiles("pages/uploaded.html"))
 	templatevp         = template.Must(template.ParseFiles("pages/vp.html"))
+	templatevpnojs     = template.Must(template.ParseFiles("pages/vpnojs.html"))
 	templateerr        = template.Must(template.ParseFiles("pages/error.html"))
 	videoQuality       = make(chan VideoParams)
 	channelOpen        = false
@@ -96,6 +97,9 @@ type PageUploaded struct {
 	QuequeSize    int
 }
 type PageVP struct {
+	VidNm string
+}
+type PageVPNoJS struct {
 	VidNm string
 }
 type PageErr struct {
@@ -374,7 +378,17 @@ func convertVideo(videoQuality chan VideoParams) {
 
 func handleVP(w http.ResponseWriter, r *http.Request) {
 	videoname := r.URL.Query().Get("videoname")
+	nojs := r.URL.Query().Get("nojs")
 	if len(videoname) <= AppConfig.MaxVideoNameLen && isSafeFileName(videoname) {
+
+		if nojs == "1" {
+			p := &PageVPNoJS{
+				VidNm: videoname,
+			}
+			renderTemplate(w, "vpnojs", p)
+			return
+		}
+
 		p := &PageVP{
 			VidNm: videoname,
 		}
@@ -501,6 +515,8 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
 		err = templateupl.ExecuteTemplate(w, tmpl+".html", p)
 	case *PageVP:
 		err = templatevp.ExecuteTemplate(w, tmpl+".html", p)
+	case *PageVPNoJS:
+		err = templatevpnojs.ExecuteTemplate(w, tmpl+".html", p)
 	case *PageErr:
 		err = templateerr.ExecuteTemplate(w, tmpl+".html", p)
 	}
