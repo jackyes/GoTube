@@ -16,7 +16,7 @@
   <a href="/" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Upload Video</a>
   <a href="/queque" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Processing Queque status</a>
 </div>
-      <div class="w3-container w3-responsive">
+      <div class="w3-container w3-responsive w3-center">
         <video class="w3-video w3-center" poster="/converted/{{.VidNm}}/output.jpeg" style="width: 100%; height: auto; max-width: 800px; max-height: 600px;" id="videoPlayer" src="/converted/{{.VidNm}}/low_{{.VidNm}}_audio.webm"  controls type="video/webm"></video>
       </div>
           <script src="/static/dash.all.min.js"></script>
@@ -25,6 +25,9 @@
                 var player = dashjs.MediaPlayer().create();
                 player.initialize(document.querySelector("#videoPlayer"), url, true);
           </script>
+          <div class="w3-center w3-blue w3-bottombar">
+            <h5 ><a href="/vp?videoname={{.VidNm}}&nojs=1" class="w3-center w3-button w3-round-xxlarge w3-mobile">Click Here for no JS (Low res) video</a></h5>
+         </div>
       <footer class="w3-container w3-blue w3-responsive">
         <h5> </h5>
       </footer>
