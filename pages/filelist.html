@@ -18,13 +18,14 @@
 </div>
 
 <table class="w3-table w3-striped w3-bordered w3-margin w3-center">
+<caption>Video List:</caption>
   <tr>
-    <th>Video:</th>
+    <th>Latest first</th>
   </tr>
 {{if .FileNames}}
         {{range .FileNames}}
                 <tr><td>
-                <a href='./vp?videoname={{.}}'><img src="/converted/{{.}}/output.jpeg" alt="{{.}} Thumbnail" width="320" height="240">{{.}}</a><br>
+                <a href='./vp?videoname={{.}}'><img src="/converted/{{.}}/output.jpeg" alt="{{.}} Thumbnail" width="320" height="240"></a>      <a href='./vp?videoname={{.}}'>{{.}}</a> </td>
                 </td><tr>
         {{end}}
 {{else}}
