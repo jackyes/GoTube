@@ -52,7 +52,8 @@ Optionally, you can disable TLS and bind the server to "127.0.0.1" so that it is
 
 ## Contribution
 
-Contributions to this project are always welcome. If you have any new ideas or suggestions for improvement, please feel free to open a new issue or pull request.
-License
+Contributions to this project are always welcome. If you have any new ideas or suggestions for improvement, please feel free to open a new issue or pull request.  
+  
+## License
 
 This project is licensed under the GPL-3 License.
