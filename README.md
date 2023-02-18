@@ -1,10 +1,11 @@
-## GoTube
+# GoTube
 
 This is a simple video streaming server implemented in Go. The server is designed to handle video uploads in various formats and provides functionalities like video conversion and deletion of older files. The server configuration is stored in a YAML file, which can be easily modified to fit the user's needs.
 
-#Features
+## Features
 
     Secure file uploads with the option to enable TLS
+    Optional Password protection for video upload
     Limit the number of videos uploaded per hour
     Video conversion to different resolutions and formats (DASH and WebM)
     Ability to delete old files after a specified number of days
@@ -14,7 +15,7 @@ This is a simple video streaming server implemented in Go. The server is designe
     Removal of metadata to enhance the privacy of uploaded videos.
 
 
-Configuration
+## Configuration
 
 The server's configuration is stored in a YAML file (config.yaml), which can be modified to fit the user's needs. The following options are available:
 
@@ -39,7 +40,7 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     UploadPath: Path to the uploaded file directory
     ConvertPath: Path to the converted video directory
 
-Usage  
+## Usage  
 To get started, you need to have Go installed on your machine. Then, you can clone the repository to your local machine and run the server.  
 
     Modify the config.yaml file to fit your needs
@@ -49,7 +50,7 @@ To get started, you need to have Go installed on your machine. Then, you can clo
 Optionally, you can disable TLS and bind the server to "127.0.0.1" so that it is only accessible from localhost then expose it as an onion service through TOR.  
 
 
-Contribution
+## Contribution
 
 Contributions to this project are always welcome. If you have any new ideas or suggestions for improvement, please feel free to open a new issue or pull request.
 License
