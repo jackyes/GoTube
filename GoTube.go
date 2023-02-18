@@ -49,6 +49,13 @@ type Cfg struct {
 	Psw                string `yaml:"Psw"`
 }
 
+type fileInfo struct {
+    Name    string
+    ModTime time.Time
+}
+
+type fileInfos []fileInfo
+
 var (
 	AppConfig       Cfg
 	checkOldEvery   = time.Hour //wait time before recheck  file deletion policies
@@ -88,7 +95,10 @@ type VideoParams struct {
 }
 
 type PageList struct {
-	FileNames []string
+	Files     []fileInfo
+	PrevPage  int
+	NextPage  int
+	TotalPage int
 }
 
 type PageQueque struct {
@@ -131,11 +141,11 @@ func main() {
 	http.HandleFunc("/video", handleVideo)
 	http.HandleFunc("/vp", handleVP)
 	http.HandleFunc("/Send", handleSendVideo)
-	http.HandleFunc("/", http.HandlerFunc(listFiles))
+	http.HandleFunc("/", http.HandlerFunc(listfilehandler))
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(staticPath))))
 	http.Handle("/converted/", http.StripPrefix("/converted", http.FileServer(http.Dir("./converted"))))
 	http.HandleFunc("/favicon.ico", http.HandlerFunc(faviconHandler))
-	http.HandleFunc("/lst", listFiles)
+	http.HandleFunc("/lst", listfilehandler)
 	http.HandleFunc("/queque", quequesize)
 	if AppConfig.EnableTLS {
 		err := http.ListenAndServeTLS(AppConfig.BindtoAdress+":"+AppConfig.ServerPortTLS, AppConfig.CertPathCrt, AppConfig.CertPathKey, nil)
@@ -161,30 +171,38 @@ func quequesize(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "queque", p)
 }
 
-func listFiles(w http.ResponseWriter, r *http.Request) {
-	folder := "uploads"
-	files, err := ioutil.ReadDir(folder)
-	if err != nil {
-		senderror(w, r, err.Error())
-		return
+
+	
+	func listfilehandler(w http.ResponseWriter, r *http.Request) {
+		pageNum, err := strconv.Atoi(r.FormValue("page"))
+		if err != nil || pageNum < 1 {
+			pageNum = 1
+		}
+	
+		dirPath := "uploads"
+		files, err := listFiles(dirPath, pageNum)
+		if err != nil {
+			senderror(w, r, err.Error())
+			return
+		}
+	
+		data := &PageList{
+			Files: files,
+		}
+	
+		if pageNum > 1 {
+			data.PrevPage = pageNum - 1
+		}
+	
+		if len(files) == 10 {
+			data.NextPage = pageNum + 1
+		}
+	
+		data.TotalPage = (len(files) + 9) / 10
+	
+		renderTemplate(w, "filelist", data)
 	}
 
-	// Sort files based on most recent modification date.
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].ModTime().After(files[j].ModTime())
-	})
-
-	fileLinks := make([]string, 0, len(files))
-	for _, file := range files {
-		fileName := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
-		fileLinks = append(fileLinks, fileName)
-	}
-
-	p := &PageList{
-		FileNames: fileLinks,
-	}
-	renderTemplate(w, "filelist", p)
-}
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("video")
@@ -554,4 +572,43 @@ func verifyPassword(username string, password string) bool {
 		return false
 	}
 	return true
+}
+
+func (f fileInfos) Len() int {
+    return len(f)
+}
+
+func (f fileInfos) Less(i, j int) bool {
+    return f[i].ModTime.After(f[j].ModTime)
+}
+
+func (f fileInfos) Swap(i, j int) {
+    f[i], f[j] = f[j], f[i]
+}
+
+func listFiles(dirPath string, pageNum int) ([]fileInfo, error) {
+    files, err := ioutil.ReadDir(dirPath)
+    if err != nil {
+        return nil, err
+    }
+
+    var infos []fileInfo
+    for _, file := range files {
+		fileName := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+        info := fileInfo{
+            Name:    fileName,
+            ModTime: file.ModTime(),
+        }
+        infos = append(infos, info)
+    }
+
+    sort.Sort(fileInfos(infos))
+
+    startIndex := (pageNum - 1) * 10
+    endIndex := startIndex + 10
+    if endIndex > len(infos) {
+        endIndex = len(infos)
+    }
+
+    return infos[startIndex:endIndex], nil
 }
