@@ -39,6 +39,9 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     CrfHigh: High video quality
     UploadPath: Path to the uploaded file directory
     ConvertPath: Path to the converted video directory
+    AllowUploadWithPsw: Allow video upload only with password
+    Psw: Password for video upload. Generate With "mkpasswd -m bcrypt -R 10 <password>"
+
 
 ## Usage  
 To get started, you need to have Go installed on your machine. Then, you can clone the repository to your local machine and run the server.  
