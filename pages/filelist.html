@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 </head>
 <body>
-  <div class="w3-container w3-blue w3-bottombar ">
+  <div class="w3-container w3-blue w3-bottombar	">
       <header class="w3-container w3-blue w3-responsive">
              <h1 class="w3-center">GoTube<img src="./static/GoTube32x32.png" alt="GoTube Logo"></h1>
       </header>
@@ -20,18 +20,24 @@
 <table class="w3-table w3-striped w3-bordered w3-margin w3-center">
 <caption>Video List:</caption>
   <tr>
-    <th>Latest first</th>
+    <th>Name</th>
+    <th>Last Modified</th>
   </tr>
-{{if .FileNames}}
-        {{range .FileNames}}
-                <tr><td>
-                <a href='./vp?videoname={{.}}'><img src="/converted/{{.}}/output.jpeg" alt="{{.}} Thumbnail" width="320" height="240"></a>      <a href='./vp?videoname={{.}}'>{{.}}</a> </td>
-                </td><tr>
-        {{end}}
-{{else}}
-<p><tr><td>No files found.</td></tr></p>
-{{end}}
+  {{range .Files}}
+  <tr>
+      <td><a href='./vp?videoname={{.Name}}'><img src="/converted/{{.Name}}/output.jpeg" alt="{{.Name}} Thumbnail" width="320" height="240"></a>      <a href='./vp?videoname={{.Name}}'>{{.Name}}</a> </td>
+      <td>{{.ModTime.Format "Jan 02, 2006 15:04:05"}}</td>
+  </tr>
+  {{end}}  
 </table>
+<div class="pagination">
+  {{if .PrevPage}}
+  <a href="?page={{.PrevPage}}">&laquo; Previous</a>
+  {{end}}
+  {{if .NextPage}}
+  <a href="?page={{.NextPage}}">Next &raquo;</a>
+  {{end}}
+</div>
       <footer class="w3-container w3-blue w3-responsive">
         <h5> </h5>
       </footer>
