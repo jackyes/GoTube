@@ -19,47 +19,51 @@ import (
 	"text/template"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 )
 
 type Cfg struct {
-	EnableTLS        bool   `yaml:"EnableTLS"`
-	EnableFDP        bool   `yaml:"EnableFDP"`
-	EnablePHL        bool   `yaml:"EnablePHL"`
-	MaxUploadSize    int64  `yaml:"MaxUploadSize"`
-	DaysOld          int    `yaml:"DaysOld"`
-	CertPathCrt      string `yaml:"CertPathCrt"`
-	CertPathKey      string `yaml:"CertPathKey"`
-	ServerPort       string `yaml:"ServerPort"`
-	ServerPortTLS    string `yaml:"ServerPortTLS"`
-	BindtoAdress     string `yaml:"BindtoAdress"`
-	MaxVideosPerHour int    `yaml:"MaxVideosPerHour"`
-	MaxVideoNameLen  int    `yaml:"MaxVideoNameLen"`
-	VideoResLow      string `yaml:"VideoResLow"`
-	VideoResMed      string `yaml:"VideoResMed"`
-	VideoResHigh     string `yaml:"VideoResHigh"`
-	CrfLow           string `yaml:"CrfLow"`
-	CrfMed           string `yaml:"CrfMed"`
-	CrfHigh          string `yaml:"CrfHigh"`
-	UploadPath       string `yaml:"UploadPath"`
-	ConvertPath      string `yaml:"ConvertPath"`
-	CheckOldEvery    string `yaml:"CheckOldEvery"`
+	EnableTLS          bool   `yaml:"EnableTLS"`
+	EnableFDP          bool   `yaml:"EnableFDP"`
+	EnablePHL          bool   `yaml:"EnablePHL"`
+	MaxUploadSize      int64  `yaml:"MaxUploadSize"`
+	DaysOld            int    `yaml:"DaysOld"`
+	CertPathCrt        string `yaml:"CertPathCrt"`
+	CertPathKey        string `yaml:"CertPathKey"`
+	ServerPort         string `yaml:"ServerPort"`
+	ServerPortTLS      string `yaml:"ServerPortTLS"`
+	BindtoAdress       string `yaml:"BindtoAdress"`
+	MaxVideosPerHour   int    `yaml:"MaxVideosPerHour"`
+	MaxVideoNameLen    int    `yaml:"MaxVideoNameLen"`
+	VideoResLow        string `yaml:"VideoResLow"`
+	VideoResMed        string `yaml:"VideoResMed"`
+	VideoResHigh       string `yaml:"VideoResHigh"`
+	CrfLow             string `yaml:"CrfLow"`
+	CrfMed             string `yaml:"CrfMed"`
+	CrfHigh            string `yaml:"CrfHigh"`
+	UploadPath         string `yaml:"UploadPath"`
+	ConvertPath        string `yaml:"ConvertPath"`
+	CheckOldEvery      string `yaml:"CheckOldEvery"`
+	AllowUploadWithPsw bool   `yaml:"AllowUploadWithPsw"`
+	Psw                string `yaml:"Psw"`
 }
 
 var (
-	AppConfig      Cfg
-	checkOldEvery  = time.Hour //wait time before recheck  file deletion policies
-	safeFileName   = regexp.MustCompile("^[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_]+)*$")
-	videosUploaded int
-	quequelen      int = 0
-	templatefl         = template.Must(template.ParseFiles("pages/filelist.html"))
-	templateq          = template.Must(template.ParseFiles("pages/queque.html"))
-	templateupl        = template.Must(template.ParseFiles("pages/uploaded.html"))
-	templatevp         = template.Must(template.ParseFiles("pages/vp.html"))
-	templatevpnojs     = template.Must(template.ParseFiles("pages/vpnojs.html"))
-	templateerr        = template.Must(template.ParseFiles("pages/error.html"))
-	videoQuality       = make(chan VideoParams)
-	channelOpen        = false
+	AppConfig       Cfg
+	checkOldEvery   = time.Hour //wait time before recheck  file deletion policies
+	safeFileName    = regexp.MustCompile("^[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_]+)*$")
+	videosUploaded  int
+	quequelen       int = 0
+	templatefl          = template.Must(template.ParseFiles("pages/filelist.html"))
+	templateq           = template.Must(template.ParseFiles("pages/queque.html"))
+	templateupl         = template.Must(template.ParseFiles("pages/uploaded.html"))
+	templatevp          = template.Must(template.ParseFiles("pages/vp.html"))
+	templatevpnojs      = template.Must(template.ParseFiles("pages/vpnojs.html"))
+	templateerr         = template.Must(template.ParseFiles("pages/error.html"))
+	templatesndfile     = template.Must(template.ParseFiles("pages/sendfile.html"))
+	videoQuality        = make(chan VideoParams)
+	channelOpen         = false
 )
 
 const (
@@ -105,6 +109,9 @@ type PageVPNoJS struct {
 type PageErr struct {
 	ErrMsg string
 }
+type PageSndFile struct {
+	UseAuth bool
+}
 
 func main() {
 	ReadConfig()
@@ -123,7 +130,8 @@ func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/video", handleVideo)
 	http.HandleFunc("/vp", handleVP)
-	http.HandleFunc("/", http.HandlerFunc(IndexHandler))
+	http.HandleFunc("/Send", handleSendVideo)
+	http.HandleFunc("/", http.HandlerFunc(listFiles))
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(staticPath))))
 	http.Handle("/converted/", http.StripPrefix("/converted", http.FileServer(http.Dir("./converted"))))
 	http.HandleFunc("/favicon.ico", http.HandlerFunc(faviconHandler))
@@ -144,15 +152,6 @@ func main() {
 
 func faviconHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, faviconPath)
-}
-
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	w.Header().Add("Content-Type", "text/html")
-	http.ServeFile(w, r, sendfilePath)
 }
 
 func quequesize(w http.ResponseWriter, r *http.Request) {
@@ -189,6 +188,15 @@ func listFiles(w http.ResponseWriter, r *http.Request) {
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("video")
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	if AppConfig.AllowUploadWithPsw && !verifyPassword(username, password) {
+		time.Sleep(5000)
+		senderror(w, r, "Wrong password")
+		return
+	}
+
 	var errormsg string
 	if err != nil {
 		senderror(w, r, err.Error())
@@ -376,6 +384,14 @@ func convertVideo(videoQuality chan VideoParams) {
 	}
 }
 
+func handleSendVideo(w http.ResponseWriter, r *http.Request) {
+	p := &PageSndFile{
+		UseAuth: AppConfig.AllowUploadWithPsw,
+	}
+	renderTemplate(w, "sendfile", p)
+	return
+}
+
 func handleVP(w http.ResponseWriter, r *http.Request) {
 	videoname := r.URL.Query().Get("videoname")
 	nojs := r.URL.Query().Get("nojs")
@@ -519,10 +535,23 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
 		err = templatevpnojs.ExecuteTemplate(w, tmpl+".html", p)
 	case *PageErr:
 		err = templateerr.ExecuteTemplate(w, tmpl+".html", p)
+	case *PageSndFile:
+		err = templatesndfile.ExecuteTemplate(w, tmpl+".html", p)
 	}
 
 	if err != nil {
 		fmt.Println("Error renderTemplate: " + err.Error())
 		http.Error(w, "Error", http.StatusInternalServerError)
 	}
+}
+
+func verifyPassword(username string, password string) bool {
+	// TODO: Query the database to retrieve the password hash for the specified username
+	hashedPassword := AppConfig.Psw
+
+	// Check if the entered password matches the hash of the password in the database
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+		return false
+	}
+	return true
 }
