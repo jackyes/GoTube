@@ -52,7 +52,26 @@ To get started, you need to have Go installed on your machine. Then, you can clo
     Access the file upload page at http://<server-ip>:<port>/ or https://<server-ip>:<port>/ (if TLS is enabled)
     
 Optionally, you can disable TLS and bind the server to "127.0.0.1" so that it is only accessible from localhost then expose it as an onion service through TOR.  
+  
+## Docker  
+It is possible to create a Docker container following these steps:  
+Clone the repository  
 
+    git clone https://github.com/jackyes/GoTube.git  
+    
+Edit the config.yaml file  
+  
+    cd GoTube
+    nano config.yaml
+  
+Create the Docker container  
+  
+    docker build -t gotube .  
+  
+Run the container  
+  
+    docker run -p 8085:8085 gotube  
+  
 
 ## Contribution
 
