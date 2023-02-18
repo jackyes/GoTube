@@ -47,6 +47,7 @@ type Cfg struct {
 	CheckOldEvery      string `yaml:"CheckOldEvery"`
 	AllowUploadWithPsw bool   `yaml:"AllowUploadWithPsw"`
 	Psw                string `yaml:"Psw"`
+	NrOfCoreVideoConv    string    `yaml:"NrOfCoreVideoConv"`
 }
 
 type fileInfo struct {
@@ -341,7 +342,7 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 func convertVideo(videoQuality chan VideoParams) {
 	for params := range videoQuality {
 		if params.audio {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", "1", "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
+			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting video:", err)
@@ -358,7 +359,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			quequelen--
 
 		} else if params.processaudio {
-			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "webm", params.ConvertPath)
+			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "webm", params.ConvertPath)
 			err4 := cmd4.Run()
 			if err4 != nil {
 				fmt.Println(err4)
@@ -390,7 +391,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			fmt.Println("MPD creation END ", params.videoName)
 			quequelen--
 		} else {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-c:v", "vp9", "-crf", params.quality, "-b:v", "1000k", "-g", "1", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "120", "-sc_threshold", "0", "-an", "-f", "webm", "-dash", "1", params.ConvertPath)
+			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "vp9", "-crf", params.quality, "-b:v", "1000k", "-g", "1", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "120", "-sc_threshold", "0", "-an", "-f", "webm", "-dash", "1", params.ConvertPath)
 
 			err := cmd.Run()
 			if err != nil {
