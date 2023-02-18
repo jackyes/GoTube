@@ -19,5 +19,5 @@ EnablePHL: true #Enable upload limit per h
 UploadPath: "./uploads"
 ConvertPath: "./converted"
 CheckOldEvery: "1h" #wait time before recheck  file deletion policies
-AllowUploadWithPsw: true  #Allow upload only with password
+AllowUploadWithPsw: false  #Allow upload only with password
 Psw: "$2b$10$8SAg3.yBwKRQOniCGKBF0.pMJdEvJHmO5StRoekP0oVXNkG/aQ1q2" #password for video upload. Generate With "mkpasswd -m bcrypt -R 10 password"
