@@ -295,7 +295,7 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	}
 	var wg sync.WaitGroup
 	var wglowqualityconv sync.WaitGroup
-	wglowqualityconv.Add(2) //convert low quality and create thumbnail befor all other conversion, so as soon as possible a low quailty video can be played
+	wglowqualityconv.Add(2) //convert low quality and create thumbnail befor all other conversion, so as soon as possible a low quality video can be played
 	wg.Add(4)
 
 	go func() {
