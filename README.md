@@ -54,6 +54,17 @@ To get started, you need to have Go installed on your machine. Then, you can clo
 Optionally, you can disable TLS and bind the server to "127.0.0.1" so that it is only accessible from localhost then expose it as an onion service through TOR.  
   
 ## Docker  
+
+It is possible to use an image on Docker Hub with the following command:
+
+    docker run -p 8085:8085 --name gotube -v /home/user/config.yaml:/config.yaml -v /home/user/uploads:/uploads -v /home/user/converted:/converted jackyes/gotube  
+    
+`/home/user/config.yaml` is the path to your config.yaml file (copy and edit the one in this repository).  
+`/home/user/uploads` is the folder where uploaded videos will be stored.  
+`/home/user/converted` is the folder where the uploaded videos will be converted.  
+change the default port 8085 accordingly with the one in config.yaml if you modify it.
+  
+### Build Docker image yourself  
 It is possible to create a Docker container following these steps:  
 Clone the repository  
 
