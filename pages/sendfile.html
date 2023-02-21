@@ -20,7 +20,7 @@
 <form class="w3-container w3-card-4 w3-center" action="/upload" method="post" enctype="multipart/form-data">
   <input class="w3-button" type="file" accept="video/*" name="video">
   {{if .UseAuth}}
-  <input class="w3-input" type="text" name="password" placeholder="Insert Password">
+  <input class="w3-input" type="password" name="password" placeholder="Insert Password">
   {{end}}
   <input class="w3-button w3-blue" type="submit" value="Upload">
 </form>
