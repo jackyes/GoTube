@@ -14,7 +14,7 @@ VideoResHigh: 720 #resolution for High quality video ex 360,480,720,1080
 CrfLow: 40  #crf value used in low conversion
 CrfMed: 40  #crf value used in medium conversion
 CrfHigh: 47 #crf value used in high conversion
-EnableFDP: true #Enable file deletion after x day
+EnableFDP: false #Enable file deletion after x day
 EnablePHL: true #Enable upload limit per h
 UploadPath: "./uploads"
 ConvertPath: "./converted"
