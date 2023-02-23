@@ -8,12 +8,12 @@ CertPathKey: "/etc/letsencrypt/live/xxxx/privkey.pem"
 BindtoAdress: "0.0.0.0" #use 127.0.0.1 to allow connection only from localhost
 MaxVideosPerHour: 10
 MaxVideoNameLen: 30
-VideoResLow: 340  #resolution for Low quality video ex 360,480,720,1080
+VideoResLow: 360  #resolution for Low quality video ex 360,480,720,1080
 VideoResMed: 480  #resolution for Medium quality video ex 360,480,720,1080
 VideoResHigh: 720 #resolution for High quality video ex 360,480,720,1080
-CrfLow: 40  #crf value used in low conversion
-CrfMed: 40  #crf value used in medium conversion
-CrfHigh: 47 #crf value used in high conversion
+CrfLow: 20  #crf value used in low conversion
+CrfMed: 22  #crf value used in medium conversion
+CrfHigh: 24 #crf value used in high conversion
 EnableFDP: false #Enable file deletion after x day
 EnablePHL: true #Enable upload limit per h
 UploadPath: "./uploads"
