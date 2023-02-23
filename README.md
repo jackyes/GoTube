@@ -83,7 +83,10 @@ Run the container
   
     docker run -p 8085:8085 gotube  
   
-
+## Prerequisite  
+FFMpeg  
+MP4Box  
+  
 ## Contribution
 
 Contributions to this project are always welcome. If you have any new ideas or suggestions for improvement, please feel free to open a new issue or pull request.  
