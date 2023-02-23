@@ -276,11 +276,11 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string) {
-	ConvertedLowPath := filepath.Join(ConvertPath+"/"+filenamenoext, "low_"+filenamenoext+".webm")
+	ConvertedLowPath := filepath.Join(ConvertPath+"/"+filenamenoext, "low_"+filenamenoext+".mp4")
 	ConvertedLowPathAudio := filepath.Join(ConvertPath+"/"+filenamenoext, "low_"+filenamenoext+"_audio.webm")
-	ConvertedMedPath := filepath.Join(ConvertPath+"/"+filenamenoext, "med_"+filenamenoext+".webm")
-	ConvertedHighPath := filepath.Join(ConvertPath+"/"+filenamenoext, "high_"+filenamenoext+".webm")
-	ConvertedAudioPath := filepath.Join(ConvertPath+"/"+filenamenoext, "audio_"+filenamenoext+".webm")
+	ConvertedMedPath := filepath.Join(ConvertPath+"/"+filenamenoext, "med_"+filenamenoext+".mp4")
+	ConvertedHighPath := filepath.Join(ConvertPath+"/"+filenamenoext, "high_"+filenamenoext+".mp4")
+	ConvertedAudioPath := filepath.Join(ConvertPath+"/"+filenamenoext, "audio_"+filenamenoext+".mp4")
 	Thumbpath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.jpeg")
 	MPDPath := filepath.Join(ConvertPath+"/"+filenamenoext, "output.mpd")
 	err := os.Mkdir(ConvertPath+"/"+filenamenoext, 0755)
@@ -301,48 +301,48 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 
 	go func() {
 		//convert video, with audio for fallback reprodution
-		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", true, false, "64k", false, filenamenoext, false}
+		videoQuality <- VideoParams{filePath, ConvertedLowPathAudio, AppConfig.CrfLow, AppConfig.VideoResLow, "-2", true, false, "64k", false, filenamenoext, false}
 		defer wglowqualityconv.Done()
 	}()
 	go func() {
 		//create thumbnail
-		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, true}
+		videoQuality <- VideoParams{filePath, Thumbpath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-2", false, false, "64k", false, filenamenoext, true}
 		defer wglowqualityconv.Done()
 	}()
 	wglowqualityconv.Wait()
 	go func() {
 		//convert video, no audio for mpd
-		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-1", false, false, "64k", false, filenamenoext, false}
+		videoQuality <- VideoParams{filePath, ConvertedLowPath, AppConfig.CrfLow, AppConfig.VideoResLow, "-2", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
 		//convert video, no audio for mpd
-		videoQuality <- VideoParams{filePath, ConvertedMedPath, AppConfig.CrfMed, AppConfig.VideoResMed, "-1", false, false, "64k", false, filenamenoext, false}
+		videoQuality <- VideoParams{filePath, ConvertedMedPath, AppConfig.CrfMed, AppConfig.VideoResMed, "-2", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
 		//convert video, no audio for mpd
-		videoQuality <- VideoParams{filePath, ConvertedHighPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", false, filenamenoext, false}
+		videoQuality <- VideoParams{filePath, ConvertedHighPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-2", false, false, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	go func() {
 		//convert audio for mpd
-		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, true, "64k", false, filenamenoext, false}
+		videoQuality <- VideoParams{filePath, ConvertedAudioPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-2", false, true, "64k", false, filenamenoext, false}
 		defer wg.Done()
 	}()
 
 	wg.Wait()
 	//create mpd
-	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-1", false, false, "64k", true, filenamenoext, false}
+	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.CrfHigh, AppConfig.VideoResHigh, "-2", false, false, "64k", true, filenamenoext, false}
 }
 
 func convertVideo(videoQuality chan VideoParams) {
 	for params := range videoQuality {
 		if params.audio {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
+			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting video:", err)
@@ -350,7 +350,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			fmt.Printf("%s converted to %s resolution %sx%s with audio\n", params.videoPath, params.quality, params.width, params.height)
 			quequelen--
 		} else if params.createThunb {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
+			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting thumbnail:", err)
@@ -359,7 +359,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			quequelen--
 
 		} else if params.processaudio {
-			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "webm", params.ConvertPath)
+			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "mp4", params.ConvertPath)
 			err4 := cmd4.Run()
 			if err4 != nil {
 				fmt.Println(err4)
@@ -374,14 +374,12 @@ func convertVideo(videoQuality chan VideoParams) {
 			quequelen--
 		} else if params.creatempd {
 			var outputpath string = filepath.Join(AppConfig.ConvertPath + "/" + params.videoName)
-			var mpdinuput string = "-i " + outputpath + "/high_" + params.videoName + ".webm -i " + outputpath + "/med_" + params.videoName + ".webm -i " + outputpath + "/low_" + params.videoName + ".webm"
-			var dashmap string = "-map 0:0 -map 1:0 -map 2:0"
+			dashmap := "-dash 2000 -frag 2000 -rap -profile onDemand -out "
+			mpdinuput := " "+  outputpath + "/high_" + params.videoName + ".mp4#video "+  outputpath + "/med_" + params.videoName + ".mp4#video "+  outputpath + "/low_" + params.videoName + ".mp4#video "
 			if _, err := os.Stat(outputpath + "/" + params.videoName + "noaudio.txt"); os.IsNotExist(err) {
-				mpdinuput = mpdinuput + " -i " + outputpath + "/audio_" + params.videoName + ".webm"
-				dashmap = dashmap + " -map 3:0"
-
+				mpdinuput = mpdinuput +  outputpath + "/audio_" + params.videoName + ".mp4#audio "
 			}
-			input := "/usr/bin/firejail ffmpeg " + mpdinuput + " " + dashmap + " -c copy -f dash " + params.ConvertPath
+			input := "MP4Box "  + dashmap +  params.ConvertPath +  mpdinuput
 			cmd5 := exec.Command("/bin/sh", "-c", input)
 
 			err5 := cmd5.Run()
@@ -391,8 +389,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			fmt.Println("MPD creation END ", params.videoName)
 			quequelen--
 		} else {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-1", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "vp9", "-crf", params.quality, "-b:v", "1000k", "-g", "1", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "120", "-sc_threshold", "0", "-an", "-f", "webm", "-dash", "1", params.ConvertPath)
-
+			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libx264", "-level", "4.1", "-crf", params.quality, "-b:v", "1500k", "-g", "60", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "60", "-sc_threshold", "0", "-an", "-f", "mp4", "-dash", "1", params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting video:", err)
