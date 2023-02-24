@@ -24,6 +24,7 @@
         <video class="w3-video w3-center" poster="/converted/{{.VidNm}}/output.jpeg"
             style="width: 100%; height: auto; max-width: 800px; max-height: 600px;" id="videoPlayer"
             src="/converted/{{.VidNm}}/low_{{.VidNm}}_audio.webm" controls type="video/webm"></video>
+    </div>
         <div id="videoController" class="video-controller unselectable">
             <div id="playPauseBtn" class="btn-play-pause" title="Play/Pause">
                 <span id="iconPlayPause" class="icon-play"></span>
@@ -51,9 +52,6 @@
             </div>
         </div>
 
-
-
-    </div>
     <script src="/static/dash.all.min.js"></script>
     <script>
         var url = "/converted/{{.VidNm}}/output.mpd";
