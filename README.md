@@ -84,8 +84,8 @@ Run the container
     docker run -p 8085:8085 gotube  
   
 ## Prerequisite  
-FFMpeg  
-MP4Box  
+[FFMpeg](https://ffmpeg.org/)  
+[MP4Box](https://github.com/gpac/gpac/wiki/MP4Box) 
   
 ## Contribution
 
