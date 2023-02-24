@@ -11,9 +11,9 @@ MaxVideoNameLen: 30
 VideoResLow: 360  #resolution for Low quality video ex 360,480,720,1080
 VideoResMed: 480  #resolution for Medium quality video ex 360,480,720,1080
 VideoResHigh: 720 #resolution for High quality video ex 360,480,720,1080
-CrfLow: 20  #crf value used in low conversion
-CrfMed: 22  #crf value used in medium conversion
-CrfHigh: 24 #crf value used in high conversion
+BitRateLow: 1000k  #BitRate value used in low conversion
+BitRateMed: 2000k  #BitRate value used in medium conversion
+BitRateHigh: 4000k #BitRate value used in high conversion
 EnableFDP: false #Enable file deletion after x day
 EnablePHL: true #Enable upload limit per h
 UploadPath: "./uploads"
