@@ -35,7 +35,7 @@ COPY --from=builder /go/bin/GoTube /usr/local/bin/GoTube
 COPY . .
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-    && apt-get install -y libssl1.1 libbz2-1.0 ffmpeg firejail \
+    && apt-get install -y ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 EXPOSE 8085
 ENTRYPOINT ["GoTube"]
