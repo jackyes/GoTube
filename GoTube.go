@@ -47,12 +47,12 @@ type Cfg struct {
 	CheckOldEvery      string `yaml:"CheckOldEvery"`
 	AllowUploadWithPsw bool   `yaml:"AllowUploadWithPsw"`
 	Psw                string `yaml:"Psw"`
-	NrOfCoreVideoConv    string    `yaml:"NrOfCoreVideoConv"`
+	NrOfCoreVideoConv  string `yaml:"NrOfCoreVideoConv"`
 }
 
 type fileInfo struct {
-    Name    string
-    ModTime time.Time
+	Name    string
+	ModTime time.Time
 }
 
 type fileInfos []fileInfo
@@ -172,38 +172,35 @@ func quequesize(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "queque", p)
 }
 
-
-	
-	func listfilehandler(w http.ResponseWriter, r *http.Request) {
-		pageNum, err := strconv.Atoi(r.FormValue("page"))
-		if err != nil || pageNum < 1 {
-			pageNum = 1
-		}
-	
-		dirPath := "uploads"
-		files, err := listFiles(dirPath, pageNum)
-		if err != nil {
-			senderror(w, r, err.Error())
-			return
-		}
-	
-		data := &PageList{
-			Files: files,
-		}
-	
-		if pageNum > 1 {
-			data.PrevPage = pageNum - 1
-		}
-	
-		if len(files) == 10 {
-			data.NextPage = pageNum + 1
-		}
-	
-		data.TotalPage = (len(files) + 9) / 10
-	
-		renderTemplate(w, "filelist", data)
+func listfilehandler(w http.ResponseWriter, r *http.Request) {
+	pageNum, err := strconv.Atoi(r.FormValue("page"))
+	if err != nil || pageNum < 1 {
+		pageNum = 1
 	}
 
+	dirPath := "uploads"
+	files, err := listFiles(dirPath, pageNum)
+	if err != nil {
+		senderror(w, r, err.Error())
+		return
+	}
+
+	data := &PageList{
+		Files: files,
+	}
+
+	if pageNum > 1 {
+		data.PrevPage = pageNum - 1
+	}
+
+	if len(files) == 10 {
+		data.NextPage = pageNum + 1
+	}
+
+	data.TotalPage = (len(files) + 9) / 10
+
+	renderTemplate(w, "filelist", data)
+}
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("video")
@@ -342,7 +339,7 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 func convertVideo(videoQuality chan VideoParams) {
 	for params := range videoQuality {
 		if params.audio {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
+			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting video:", err)
@@ -350,7 +347,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			fmt.Printf("%s converted to %s resolution %sx%s with audio\n", params.videoPath, params.quality, params.width, params.height)
 			quequelen--
 		} else if params.createThunb {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
+			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting thumbnail:", err)
@@ -359,7 +356,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			quequelen--
 
 		} else if params.processaudio {
-			cmd4 := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "mp4", params.ConvertPath)
+			cmd4 := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "mp4", params.ConvertPath)
 			err4 := cmd4.Run()
 			if err4 != nil {
 				fmt.Println(err4)
@@ -375,11 +372,11 @@ func convertVideo(videoQuality chan VideoParams) {
 		} else if params.creatempd {
 			var outputpath string = filepath.Join(AppConfig.ConvertPath + "/" + params.videoName)
 			dashmap := "-dash 2000 -frag 2000 -rap -profile onDemand -out "
-			mpdinuput := " "+  outputpath + "/high_" + params.videoName + ".mp4#video "+  outputpath + "/med_" + params.videoName + ".mp4#video "+  outputpath + "/low_" + params.videoName + ".mp4#video "
+			mpdinuput := " " + outputpath + "/high_" + params.videoName + ".mp4#video " + outputpath + "/med_" + params.videoName + ".mp4#video " + outputpath + "/low_" + params.videoName + ".mp4#video "
 			if _, err := os.Stat(outputpath + "/" + params.videoName + "noaudio.txt"); os.IsNotExist(err) {
-				mpdinuput = mpdinuput +  outputpath + "/audio_" + params.videoName + ".mp4#audio "
+				mpdinuput = mpdinuput + outputpath + "/audio_" + params.videoName + ".mp4#audio "
 			}
-			input := "MP4Box "  + dashmap +  params.ConvertPath +  mpdinuput
+			input := "MP4Box " + dashmap + params.ConvertPath + mpdinuput
 			cmd5 := exec.Command("/bin/sh", "-c", input)
 
 			err5 := cmd5.Run()
@@ -389,7 +386,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			fmt.Println("MPD creation END ", params.videoName)
 			quequelen--
 		} else {
-			cmd := exec.Command("/usr/bin/firejail", "ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libx264", "-level", "4.1", "-crf", params.quality, "-b:v", "1500k", "-g", "60", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "60", "-sc_threshold", "0", "-an", "-f", "mp4", "-dash", "1", params.ConvertPath)
+			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libx264", "-level", "4.1", "-crf", params.quality, "-b:v", "1500k", "-g", "60", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "60", "-sc_threshold", "0", "-an", "-f", "mp4", "-dash", "1", params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting video:", err)
@@ -573,40 +570,40 @@ func verifyPassword(username string, password string) bool {
 }
 
 func (f fileInfos) Len() int {
-    return len(f)
+	return len(f)
 }
 
 func (f fileInfos) Less(i, j int) bool {
-    return f[i].ModTime.After(f[j].ModTime)
+	return f[i].ModTime.After(f[j].ModTime)
 }
 
 func (f fileInfos) Swap(i, j int) {
-    f[i], f[j] = f[j], f[i]
+	f[i], f[j] = f[j], f[i]
 }
 
 func listFiles(dirPath string, pageNum int) ([]fileInfo, error) {
-    files, err := ioutil.ReadDir(dirPath)
-    if err != nil {
-        return nil, err
-    }
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
 
-    var infos []fileInfo
-    for _, file := range files {
+	var infos []fileInfo
+	for _, file := range files {
 		fileName := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
-        info := fileInfo{
-            Name:    fileName,
-            ModTime: file.ModTime(),
-        }
-        infos = append(infos, info)
-    }
+		info := fileInfo{
+			Name:    fileName,
+			ModTime: file.ModTime(),
+		}
+		infos = append(infos, info)
+	}
 
-    sort.Sort(fileInfos(infos))
+	sort.Sort(fileInfos(infos))
 
-    startIndex := (pageNum - 1) * 10
-    endIndex := startIndex + 10
-    if endIndex > len(infos) {
-        endIndex = len(infos)
-    }
+	startIndex := (pageNum - 1) * 10
+	endIndex := startIndex + 10
+	if endIndex > len(infos) {
+		endIndex = len(infos)
+	}
 
-    return infos[startIndex:endIndex], nil
+	return infos[startIndex:endIndex], nil
 }
