@@ -344,7 +344,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			if err != nil {
 				fmt.Println("Error converting video:", err)
 			}
-			fmt.Printf("%s converted at %s, resolution %sx%s with audio\n", params.videoPath, params.quality, params.width, params.height)
+			fmt.Printf("%s converted to %s resolution %sx%s with audio\n", params.videoPath, params.quality, params.width, params.height)
 			quequelen--
 		} else if params.createThunb {
 			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-ss", "00:00:01", "-vframes", "1", "-s", "640x480", "-f", "image2", params.ConvertPath)
@@ -356,7 +356,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			quequelen--
 
 		} else if params.processaudio {
-			cmd4 := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "libopus", "-b:a", params.audioquality, "-vn", "-f", "mp4", params.ConvertPath)
+			cmd4 := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:a", "aac", "-b:a", params.audioquality, "-vn", "-f", "mp4", params.ConvertPath)
 			err4 := cmd4.Run()
 			if err4 != nil {
 				fmt.Println(err4)
@@ -391,7 +391,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			if err != nil {
 				fmt.Println("Error converting video:", err)
 			}
-			fmt.Printf("%s converted at %s, resolution %sx%s\n", params.videoPath, params.quality, params.width, params.height)
+			fmt.Printf("%s converted to %s resolution %sx%s\n", params.videoPath, params.quality, params.width, params.height)
 			quequelen--
 		}
 	}
