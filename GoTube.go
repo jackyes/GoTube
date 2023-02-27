@@ -25,6 +25,7 @@ import (
 
 type Cfg struct {
 	EnableTLS          bool   `yaml:"EnableTLS"`
+	EnableNoTLS        bool   `yaml:"EnableNoTLS"`
 	EnableFDP          bool   `yaml:"EnableFDP"`
 	EnablePHL          bool   `yaml:"EnablePHL"`
 	MaxUploadSize      int64  `yaml:"MaxUploadSize"`
@@ -149,11 +150,14 @@ func main() {
 	http.HandleFunc("/lst", listfilehandler)
 	http.HandleFunc("/queque", quequesize)
 	if AppConfig.EnableTLS {
-		err := http.ListenAndServeTLS(AppConfig.BindtoAdress+":"+AppConfig.ServerPortTLS, AppConfig.CertPathCrt, AppConfig.CertPathKey, nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-	} else {
+		go func() {
+			err := http.ListenAndServeTLS(AppConfig.BindtoAdress+":"+AppConfig.ServerPortTLS, AppConfig.CertPathCrt, AppConfig.CertPathKey, nil)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}()
+	}
+	if AppConfig.EnableNoTLS {
 		err := http.ListenAndServe(AppConfig.BindtoAdress+":"+AppConfig.ServerPort, nil)
 		if err != nil {
 			fmt.Println(err)
