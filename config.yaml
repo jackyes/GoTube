@@ -1,4 +1,5 @@
 EnableTLS: false
+EnableNoTLS: true
 MaxUploadSize: 5000000000  #5Gb
 DaysOld: 7 #max video age (deletion)
 ServerPortTLS: 8086
@@ -9,11 +10,11 @@ BindtoAdress: "0.0.0.0" #use 127.0.0.1 to allow connection only from localhost
 MaxVideosPerHour: 10
 MaxVideoNameLen: 30
 VideoResLow: 360  #resolution for Low quality video ex 360,480,720,1080
-VideoResMed: 480  #resolution for Medium quality video ex 360,480,720,1080
-VideoResHigh: 720 #resolution for High quality video ex 360,480,720,1080
-BitRateLow: 1000k  #BitRate value used in low conversion
-BitRateMed: 2000k  #BitRate value used in medium conversion
-BitRateHigh: 4000k #BitRate value used in high conversion
+VideoResMed: 720  #resolution for Medium quality video ex 360,480,720,1080
+VideoResHigh: 1080 #resolution for High quality video ex 360,480,720,1080
+BitRateLow: 500k  #BitRate value used in low conversion
+BitRateMed: 1500k  #BitRate value used in medium conversion
+BitRateHigh: 3000k #BitRate value used in high conversion
 EnableFDP: false #Enable file deletion after x day
 EnablePHL: true #Enable upload limit per h
 UploadPath: "./uploads"
