@@ -20,6 +20,7 @@ This is a simple video streaming server implemented in Go. The server is designe
 The server's configuration is stored in a YAML file (config.yaml), which can be modified to fit the user's needs. The following options are available:
 
     EnableTLS: Enable/disable TLS support
+    EnableNoTLS: Enable/disable Http without TLS
     EnableFDP: Enable/disable automatic deletion of old files
     EnablePHL: Enable/disable file name validation
     MaxUploadSize: Maximum file size allowed for uploads
