@@ -29,6 +29,11 @@ RUN go mod download \
 
 # Stage 2: runtime
 FROM debian:stable-slim
+
+# Create a dedicated/non-privileged user to run the app.
+RUN addgroup gotube \
+    && useradd -r -g gotube -d /home/gotube -s /sbin/nologin -c "GoTube User" gotube
+
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /usr/local/bin/MP4Box /usr/local/bin/
 COPY --from=builder /go/bin/GoTube /usr/local/bin/GoTube
@@ -36,6 +41,13 @@ COPY . .
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && chown -R gotube:gotube /uploads \
+    && chown -R gotube:gotube /converted \
+    && chown -R gotube:gotube /pages \
+    && chown -R gotube:gotube /static
+
+USER gotube
 EXPOSE 8085
+
 ENTRYPOINT ["GoTube"]
