@@ -30,6 +30,7 @@ type Cfg struct {
 	EnablePHL          bool   `yaml:"EnablePHL"`
 	MaxUploadSize      int64  `yaml:"MaxUploadSize"`
 	DaysOld            int    `yaml:"DaysOld"`
+	DelVidAftUpl       bool   `yaml:"DelVidAftUpl"`
 	CertPathCrt        string `yaml:"CertPathCrt"`
 	CertPathKey        string `yaml:"CertPathKey"`
 	ServerPort         string `yaml:"ServerPort"`
@@ -51,12 +52,12 @@ type Cfg struct {
 	NrOfCoreVideoConv  string `yaml:"NrOfCoreVideoConv"`
 }
 
-type fileInfo struct {
+type folderInfo struct {
 	Name    string
 	ModTime time.Time
 }
 
-type fileInfos []fileInfo
+type folderInfos []folderInfo
 
 var (
 	AppConfig       Cfg
@@ -97,7 +98,7 @@ type VideoParams struct {
 }
 
 type PageList struct {
-	Files     []fileInfo
+	Files     []folderInfo
 	PrevPage  int
 	NextPage  int
 	TotalPage int
@@ -143,11 +144,11 @@ func main() {
 	http.HandleFunc("/video", handleVideo)
 	http.HandleFunc("/vp", handleVP)
 	http.HandleFunc("/Send", handleSendVideo)
-	http.HandleFunc("/", http.HandlerFunc(listfilehandler))
+	http.HandleFunc("/", http.HandlerFunc(listfolderhandler))
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(staticPath))))
 	http.Handle("/converted/", http.StripPrefix("/converted", http.FileServer(http.Dir("./converted"))))
 	http.HandleFunc("/favicon.ico", http.HandlerFunc(faviconHandler))
-	http.HandleFunc("/lst", listfilehandler)
+	http.HandleFunc("/lst", listfolderhandler)
 	http.HandleFunc("/queque", quequesize)
 	if AppConfig.EnableTLS {
 		go func() {
@@ -176,32 +177,32 @@ func quequesize(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "queque", p)
 }
 
-func listfilehandler(w http.ResponseWriter, r *http.Request) {
+func listfolderhandler(w http.ResponseWriter, r *http.Request) {
 	pageNum, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil || pageNum < 1 {
 		pageNum = 1
 	}
 
-	dirPath := "uploads"
-	files, err := listFiles(dirPath, pageNum)
+	dirPath := "converted"
+	folders, err := listFolders(dirPath, pageNum)
 	if err != nil {
 		senderror(w, r, err.Error())
 		return
 	}
 
 	data := &PageList{
-		Files: files,
+		Files: folders,
 	}
 
 	if pageNum > 1 {
 		data.PrevPage = pageNum - 1
 	}
 
-	if len(files) == 10 {
+	if len(folders) == 10 {
 		data.NextPage = pageNum + 1
 	}
 
-	data.TotalPage = (len(files) + 9) / 10
+	data.TotalPage = (len(folders) + 9) / 10
 
 	renderTemplate(w, "filelist", data)
 }
@@ -338,6 +339,13 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	wg.Wait()
 	//create mpd
 	videoQuality <- VideoParams{filePath, MPDPath, AppConfig.BitRateHigh, AppConfig.VideoResHigh, "-2", false, false, "64k", true, filenamenoext, false}
+	if AppConfig.DelVidAftUpl { // DelVidAftUpl is set true delete the original video
+		err := os.Remove(filePath)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
 }
 
 func convertVideo(videoQuality chan VideoParams) {
@@ -573,35 +581,36 @@ func verifyPassword(username string, password string) bool {
 	return true
 }
 
-func (f fileInfos) Len() int {
+func (f folderInfos) Len() int {
 	return len(f)
 }
 
-func (f fileInfos) Less(i, j int) bool {
+func (f folderInfos) Less(i, j int) bool {
 	return f[i].ModTime.After(f[j].ModTime)
 }
 
-func (f fileInfos) Swap(i, j int) {
+func (f folderInfos) Swap(i, j int) {
 	f[i], f[j] = f[j], f[i]
 }
 
-func listFiles(dirPath string, pageNum int) ([]fileInfo, error) {
+func listFolders(dirPath string, pageNum int) ([]folderInfo, error) {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var infos []fileInfo
+	var infos []folderInfo
 	for _, file := range files {
-		fileName := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
-		info := fileInfo{
-			Name:    fileName,
-			ModTime: file.ModTime(),
+		if file.IsDir() {
+			info := folderInfo{
+				Name:    file.Name(),
+				ModTime: file.ModTime(),
+			}
+			infos = append(infos, info)
 		}
-		infos = append(infos, info)
 	}
 
-	sort.Sort(fileInfos(infos))
+	sort.Sort(folderInfos(infos))
 
 	startIndex := (pageNum - 1) * 10
 	endIndex := startIndex + 10
