@@ -43,6 +43,7 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     AllowUploadWithPsw: Allow video upload only with password
     Psw: Password for video upload. Generate With "mkpasswd -m bcrypt -R 10 <password>"
     NrOfCoreVideoConv: Number of threads used for video conversion
+    DelVidAftUpl: Delete or keep original video after conversion
 
 
 ## Usage  
