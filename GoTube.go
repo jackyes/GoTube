@@ -185,6 +185,7 @@ func listfolderhandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dirPath := "converted"
+
 	folders, err := listFolders(dirPath, pageNum)
 	if err != nil {
 		senderror(w, r, err.Error())
@@ -614,6 +615,9 @@ func listFolders(dirPath string, pageNum int) ([]folderInfo, error) {
 	sort.Sort(folderInfos(infos))
 
 	startIndex := (pageNum - 1) * 10
+	if startIndex >= len(infos) {
+		return nil, fmt.Errorf("Invalid page number: %d", pageNum)
+	}
 	endIndex := startIndex + 10
 	if endIndex > len(infos) {
 		endIndex = len(infos)
