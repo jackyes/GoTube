@@ -37,6 +37,7 @@ type Cfg struct {
 	ServerPortTLS      string `yaml:"ServerPortTLS"`
 	BindtoAdress       string `yaml:"BindtoAdress"`
 	MaxVideosPerHour   int    `yaml:"MaxVideosPerHour"`
+	VideoPerPage       int    `yaml:"VideoPerPage"`
 	MaxVideoNameLen    int    `yaml:"MaxVideoNameLen"`
 	VideoResLow        string `yaml:"VideoResLow"`
 	VideoResMed        string `yaml:"VideoResMed"`
@@ -198,11 +199,11 @@ func listfolderhandler(w http.ResponseWriter, r *http.Request) {
 		data.PrevPage = pageNum - 1
 	}
 
-	if len(folders) == 10 {
+	if len(folders) == AppConfig.VideoPerPage {
 		data.NextPage = pageNum + 1
 	}
 
-	data.TotalPage = (len(folders) + 9) / 10
+	data.TotalPage = (len(folders) + (AppConfig.VideoPerPage-1)) / AppConfig.VideoPerPage
 
 	renderTemplate(w, "filelist", data)
 }
