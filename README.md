@@ -6,6 +6,7 @@ This is a simple video streaming server implemented in Go. The server is designe
 
     Secure file uploads with the option to enable TLS
     Optional Password protection for video upload
+    List uploaded videos and choose the number of videos displayed per page
     Limit the number of videos uploaded per hour
     Video conversion to different resolutions and formats (DASH and WebM)
     Ability to delete old files after a specified number of days
@@ -45,6 +46,8 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     Psw: Password for video upload. Generate With "mkpasswd -m bcrypt -R 10 <password>"
     NrOfCoreVideoConv: Number of threads used for video conversion
     DelVidAftUpl: Delete or keep original video after conversion
+    VideoPerPage: Number of displayed video per page in Video list
+
 
 
 ## Usage  
