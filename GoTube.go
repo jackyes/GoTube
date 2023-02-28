@@ -616,6 +616,9 @@ func listFolders(dirPath string, pageNum int) ([]folderInfo, error) {
 
 	startIndex := (pageNum - 1) * 10
 	if startIndex >= len(infos) {
+		if startIndex == 0 {
+			return nil, fmt.Errorf("No video available.")
+		}
 		return nil, fmt.Errorf("Invalid page number: %d", pageNum)
 	}
 	endIndex := startIndex + 10
