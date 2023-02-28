@@ -9,6 +9,7 @@ This is a simple video streaming server implemented in Go. The server is designe
     Limit the number of videos uploaded per hour
     Video conversion to different resolutions and formats (DASH and WebM)
     Ability to delete old files after a specified number of days
+    Ability to delete original video after conversion
     Simple and intuitive web interface
     HTML templates for displaying file lists, upload progress, and error messages
     Video conversion with customizable resolution and quality settings
