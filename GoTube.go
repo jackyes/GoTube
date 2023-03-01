@@ -28,6 +28,7 @@ type Cfg struct {
 	EnableNoTLS        bool   `yaml:"EnableNoTLS"`
 	EnableFDP          bool   `yaml:"EnableFDP"`
 	EnablePHL          bool   `yaml:"EnablePHL"`
+	AllowEmbedded      bool   `yaml:"AllowEmbedded"`
 	MaxUploadSize      int64  `yaml:"MaxUploadSize"`
 	DaysOld            int    `yaml:"DaysOld"`
 	DelVidAftUpl       bool   `yaml:"DelVidAftUpl"`
@@ -71,6 +72,7 @@ var (
 	templateq           = template.Must(template.ParseFiles("pages/queque.html"))
 	templateupl         = template.Must(template.ParseFiles("pages/uploaded.html"))
 	templatevp          = template.Must(template.ParseFiles("pages/vp.html"))
+	templatevpemb          = template.Must(template.ParseFiles("pages/embedded.html"))
 	templatevpnojs      = template.Must(template.ParseFiles("pages/vpnojs.html"))
 	templateerr         = template.Must(template.ParseFiles("pages/error.html"))
 	templatesndfile     = template.Must(template.ParseFiles("pages/sendfile.html"))
@@ -114,6 +116,9 @@ type PageUploaded struct {
 	FileName      string
 	FileNameNoExt string
 	QuequeSize    int
+}
+type PageVPEMB struct {
+	VidNm string
 }
 type PageVP struct {
 	VidNm string
@@ -423,8 +428,16 @@ func handleSendVideo(w http.ResponseWriter, r *http.Request) {
 func handleVP(w http.ResponseWriter, r *http.Request) {
 	videoname := r.URL.Query().Get("videoname")
 	nojs := r.URL.Query().Get("nojs")
-	if len(videoname) <= AppConfig.MaxVideoNameLen && isSafeFileName(videoname) {
+	emb := r.URL.Query().Get("embedded")
 
+	if len(videoname) <= AppConfig.MaxVideoNameLen && isSafeFileName(videoname) {
+		if emb == "true" && AppConfig.AllowEmbedded {
+			p := &PageVPEMB{
+				VidNm: videoname,
+			}
+			renderTemplate(w, "embedded", p)
+			return
+		}
 		if nojs == "1" {
 			p := &PageVPNoJS{
 				VidNm: videoname,
@@ -559,6 +572,8 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
 		err = templateupl.ExecuteTemplate(w, tmpl+".html", p)
 	case *PageVP:
 		err = templatevp.ExecuteTemplate(w, tmpl+".html", p)
+	case *PageVPEMB:
+		err = templatevpemb.ExecuteTemplate(w, tmpl+".html", p)
 	case *PageVPNoJS:
 		err = templatevpnojs.ExecuteTemplate(w, tmpl+".html", p)
 	case *PageErr:
