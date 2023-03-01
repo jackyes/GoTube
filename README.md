@@ -47,6 +47,7 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     NrOfCoreVideoConv: Number of threads used for video conversion
     DelVidAftUpl: Delete or keep original video after conversion
     VideoPerPage: Number of displayed video per page in Video list
+    VideoConvPreset: Preset userd for conversion. Options: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
 
 
 
