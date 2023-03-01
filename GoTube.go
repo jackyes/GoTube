@@ -51,6 +51,7 @@ type Cfg struct {
 	AllowUploadWithPsw bool   `yaml:"AllowUploadWithPsw"`
 	Psw                string `yaml:"Psw"`
 	NrOfCoreVideoConv  string `yaml:"NrOfCoreVideoConv"`
+	VideoConvPreset    string `yaml:"VideoConvPreset"`
 }
 
 type folderInfo struct {
@@ -204,7 +205,7 @@ func listfolderhandler(w http.ResponseWriter, r *http.Request) {
 		data.NextPage = pageNum + 1
 	}
 
-	data.TotalPage = (len(folders) + (AppConfig.VideoPerPage-1)) / AppConfig.VideoPerPage
+	data.TotalPage = (len(folders) + (AppConfig.VideoPerPage - 1)) / AppConfig.VideoPerPage
 
 	renderTemplate(w, "filelist", data)
 }
@@ -400,7 +401,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			fmt.Println("MPD creation END ", params.videoName)
 			quequelen--
 		} else {
-			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libx264", "-level", "4.1", "-b:v", params.quality, "-g", "60", "-vf", "scale="+params.width+":"+params.height, "-keyint_min", "60", "-sc_threshold", "0", "-an", "-f", "mp4", "-dash", "1", params.ConvertPath)
+			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libx264", "-level", "4.1", "-b:v", params.quality, "-g", "60", "-vf", "scale="+params.width+":"+params.height, "-preset", AppConfig.VideoConvPreset, "-keyint_min", "60", "-sc_threshold", "0", "-an", "-f", "mp4", "-dash", "1", params.ConvertPath)
 			err := cmd.Run()
 			if err != nil {
 				fmt.Println("Error converting video:", err)
