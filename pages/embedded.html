@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Video Player</title>
+    <link rel="stylesheet" href="./static/w3.css">
+    <link rel="stylesheet" href="./static/controlbar.css">
+    <script src="./static/ControlBar.js"></script>
+</head>
+
+<body>
+    <div class="w3-container w3-responsive w3-center">
+        <video class="w3-video w3-center" poster="/converted/{{.VidNm}}/output.jpeg"
+            style="width: 100%; height: auto; max-width: 800px; max-height: 600px;" id="videoPlayer"
+            controls type="video/mp4"></video>
+    </div>
+        <div id="videoController" class="video-controller unselectable">
+            <div id="playPauseBtn" class="btn-play-pause" title="Play/Pause">
+                <span id="iconPlayPause" class="icon-play"></span>
+            </div>
+            <span id="videoTime" class="time-display">00:00:00</span>
+            <div id="fullscreenBtn" class="btn-fullscreen control-icon-layout"  onclick="openFullscreen()" title="Fullscreen">
+                <span class="icon-fullscreen-enter"></span>
+            </div>
+            <div id="bitrateListBtn" class="control-icon-layout" title="Bitrate List">
+                <span class="icon-bitrate"></span>
+            </div>
+            <input type="range" id="volumebar" class="volumebar" value="1" min="0" max="1" step=".01" />
+            <div id="muteBtn" class="btn-mute control-icon-layout" title="Mute">
+                <span id="iconMute" class="icon-mute-off"></span>
+            </div>
+            <div id="trackSwitchBtn" class="control-icon-layout" title="A/V Tracks">
+                <span class="icon-tracks"></span>
+            </div>
+            <div id="captionBtn" class="btn-caption control-icon-layout" title="Closed Caption">
+                <span class="icon-caption"></span>
+            </div>
+            <span id="videoDuration" class="duration-display">00:00:00</span>
+            <div class="seekContainer">
+                <input type="range" id="seekbar" value="0" class="seekbar" min="0" step="0.01" />
+            </div>
+        </div>
+
+        <script>
+            function openFullscreen() {
+                var elem = document.querySelector("video");
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) { /* Safari */
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) { /* IE11 */
+                    elem.msRequestFullscreen();
+                }
+            }
+        </script>
+
+    <script src="/static/dash.all.min.js"></script>
+    <script>
+        var url = "/converted/{{.VidNm}}/output.mpd";
+        var player = dashjs.MediaPlayer().create();
+        player.initialize(document.querySelector("#videoPlayer"), url, true);
+        var controlbar = new ControlBar(player);
+        controlbar.initialize();
+    </script>
+    </div>
+</body>
+
