@@ -25,3 +25,4 @@ Psw: "$2b$10$8SAg3.yBwKRQOniCGKBF0.pMJdEvJHmO5StRoekP0oVXNkG/aQ1q2" #password fo
 NrOfCoreVideoConv: "1" #Number of threads used for video conversion
 DelVidAftUpl: true #Delete original video after conversion
 VideoPerPage: 10 #Nr of displayed video per page in Video list
+VideoConvPreset: "faster" #Options: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
