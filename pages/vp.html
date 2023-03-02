@@ -86,10 +86,12 @@
         controlbar.initialize();
     </script>
     <div class="w3-center w3-blue w3-bottombar">
-        <button class="w3-bar-item w3-button w3-round-xxlarge w3-mobile" id="copy-link-btn" onclick="copyLink()">Share
+        <button class="w3-bar-item w3-button w3-round-xxlarge w3-mobile" id="copy-link-btn" onclick="copyLink()"><img
+                src="./static/share.png" alt="Share"> Share
             Link</button>
         {{if .Embed}}
-        <button class="w3-bar-item w3-button w3-round-xxlarge w3-mobile" id="copy-html-btn" onclick="copyHtml()">Embed
+        <button class="w3-bar-item w3-button w3-round-xxlarge w3-mobile" id="copy-html-btn" onclick="copyHtml()"><img
+                src="./static/embed.png" alt="Embed"> Embed
             on other site</button>
         {{end}}
         <h5><a href="/vp?videoname={{.VidNm}}&nojs=1" class="w3-center w3-button w3-round-xxlarge w3-mobile">Click Here
