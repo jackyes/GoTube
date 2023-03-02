@@ -1,5 +1,3 @@
-//ToDo:
-
 package main
 
 import (
@@ -122,6 +120,7 @@ type PageVPEMB struct {
 }
 type PageVP struct {
 	VidNm string
+	Embed bool
 }
 type PageVPNoJS struct {
 	VidNm string
@@ -431,7 +430,7 @@ func handleVP(w http.ResponseWriter, r *http.Request) {
 	emb := r.URL.Query().Get("embedded")
 
 	if len(videoname) <= AppConfig.MaxVideoNameLen && isSafeFileName(videoname) {
-		if emb == "true" && AppConfig.AllowEmbedded {
+		if emb == "1" && AppConfig.AllowEmbedded {
 			p := &PageVPEMB{
 				VidNm: videoname,
 			}
@@ -448,6 +447,7 @@ func handleVP(w http.ResponseWriter, r *http.Request) {
 
 		p := &PageVP{
 			VidNm: videoname,
+			Embed: AppConfig.AllowEmbedded,
 		}
 		renderTemplate(w, "vp", p)
 		return
