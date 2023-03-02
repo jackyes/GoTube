@@ -147,7 +147,6 @@ func main() {
 
 	go resetVideoUploadedCounter()
 	http.HandleFunc("/upload", uploadHandler)
-	http.HandleFunc("/video", handleVideo)
 	http.HandleFunc("/vp", handleVP)
 	http.HandleFunc("/Send", handleSendVideo)
 	http.HandleFunc("/", http.HandlerFunc(listfolderhandler))
@@ -463,46 +462,6 @@ func handleVP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	senderror(w, r, "Invalid file name only allowed A-Z,a-z,0-9,-,_ or it'slonger than "+strconv.Itoa(AppConfig.MaxVideoNameLen)+" characters")
-}
-
-func handleVideo(w http.ResponseWriter, r *http.Request) {
-	videoname := r.URL.Query().Get("videoname")
-	speed := r.URL.Query().Get("speed")
-
-	if len(videoname) > AppConfig.MaxVideoNameLen || !isSafeFileName(videoname) {
-		senderror(w, r, "Invalid file name only allowed A-Z,a-z,0-9,-,_ or it'slonger than "+strconv.Itoa(AppConfig.MaxVideoNameLen)+" characters")
-		return
-	}
-	//choose the video format based on the connection speed
-	var videoName string
-	switch speed {
-	case "20":
-		videoName = "high_" + videoname + ".webm"
-	case "10":
-		videoName = "med_" + videoname + ".webm"
-	default:
-		videoName = "low_" + videoname + ".webm"
-	}
-
-	//Let's build the path to the video file
-	videoPath := filepath.Join("converted/"+videoname, videoName)
-
-	//Let's open the video file
-	videoFile, err := os.Open(videoPath)
-	if err != nil {
-		senderror(w, r, "Error opening video file:"+err.Error())
-		return
-	}
-	defer videoFile.Close()
-
-	//set the content type as video/webm
-	w.Header().Set("Content-Type", "video/webm")
-
-	//copy the contents of the video file into the response
-	_, err = io.Copy(w, videoFile)
-	if err != nil {
-		senderror(w, r, "Errore copia file video:"+err.Error())
-	}
 }
 
 func deleteOLD() {
