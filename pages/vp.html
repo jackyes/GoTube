@@ -71,7 +71,7 @@
 
         function copyHtml() {
             var link = window.location.href;
-            var htmlCode = '<iframe src="' + link + '&embedded=true"></iframe>';
+            var htmlCode = '<iframe src="' + link + '&embedded=1"></iframe>';
             navigator.clipboard.writeText(htmlCode);
         }
 
@@ -88,8 +88,10 @@
     <div class="w3-center w3-blue w3-bottombar">
         <button class="w3-bar-item w3-button w3-round-xxlarge w3-mobile" id="copy-link-btn" onclick="copyLink()">Share
             Link</button>
+        {{if .Embed}}
         <button class="w3-bar-item w3-button w3-round-xxlarge w3-mobile" id="copy-html-btn" onclick="copyHtml()">Embed
             on other site</button>
+        {{end}}
         <h5><a href="/vp?videoname={{.VidNm}}&nojs=1" class="w3-center w3-button w3-round-xxlarge w3-mobile">Click Here
                 for no JS (Low res) video</a></h5>
     </div>
