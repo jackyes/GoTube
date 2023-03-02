@@ -15,6 +15,8 @@ This is a simple video streaming server implemented in Go. The server is designe
     HTML templates for displaying file lists, upload progress, and error messages
     Video conversion with customizable resolution and quality settings
     Removal of metadata to enhance the privacy of uploaded videos.
+    Easy sharing on other website
+    
 
 
 ## Configuration
@@ -48,6 +50,8 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     DelVidAftUpl: Delete or keep original video after conversion
     VideoPerPage: Number of displayed video per page in Video list
     VideoConvPreset: Preset userd for conversion. Options: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+    AllowEmbedded: Allow page for Embedding video in other page
+
 
 
 
