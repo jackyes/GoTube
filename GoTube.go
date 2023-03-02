@@ -70,7 +70,7 @@ var (
 	templateq           = template.Must(template.ParseFiles("pages/queque.html"))
 	templateupl         = template.Must(template.ParseFiles("pages/uploaded.html"))
 	templatevp          = template.Must(template.ParseFiles("pages/vp.html"))
-	templatevpemb          = template.Must(template.ParseFiles("pages/embedded.html"))
+	templatevpemb       = template.Must(template.ParseFiles("pages/embedded.html"))
 	templatevpnojs      = template.Must(template.ParseFiles("pages/vpnojs.html"))
 	templateerr         = template.Must(template.ParseFiles("pages/error.html"))
 	templatesndfile     = template.Must(template.ParseFiles("pages/sendfile.html"))
@@ -349,8 +349,7 @@ func StartconvertVideo(filePath string, ConvertPath string, filenamenoext string
 	if AppConfig.DelVidAftUpl { // DelVidAftUpl is set true delete the original video
 		err := os.Remove(filePath)
 		if err != nil {
-			fmt.Println(err)
-			return
+			fmt.Println("error removing original video file:", err)
 		}
 	}
 }
@@ -403,6 +402,17 @@ func convertVideo(videoQuality chan VideoParams) {
 				fmt.Println(err5)
 			}
 			fmt.Println("MPD creation END ", params.videoName)
+			files := []string{
+				filepath.Join(outputpath, "low_"+params.videoName+".mp4"),
+				filepath.Join(outputpath, "med_"+params.videoName+".mp4"),
+				filepath.Join(outputpath, "high_"+params.videoName+".mp4"),
+				filepath.Join(outputpath, "audio_"+params.videoName+".mp4"),
+			}
+			for _, f := range files {
+				if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+					fmt.Printf("error removing file %s: %v\n", f, err)
+				}
+			}
 			quequelen--
 		} else {
 			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libx264", "-level", "4.1", "-b:v", params.quality, "-g", "60", "-vf", "scale="+params.width+":"+params.height, "-preset", AppConfig.VideoConvPreset, "-keyint_min", "60", "-sc_threshold", "0", "-an", "-f", "mp4", "-dash", "1", params.ConvertPath)
