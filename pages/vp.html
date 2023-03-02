@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="./static/w3.css">
     <link rel="stylesheet" href="./static/controlbar.css">
     <script src="./static/ControlBar.js"></script>
+    <script src="/static/dash.all.min.js"></script>
 </head>
 
 <body>
@@ -75,10 +76,6 @@
             navigator.clipboard.writeText(htmlCode);
         }
 
-    </script>
-
-    <script src="/static/dash.all.min.js"></script>
-    <script>
         var url = "/converted/{{.VidNm}}/output.mpd";
         var player = dashjs.MediaPlayer().create();
         player.initialize(document.querySelector("#videoPlayer"), url, true);
@@ -94,7 +91,7 @@
                 src="./static/embed.png" alt="Embed"> Embed
             on other site</button>
         {{end}}
-        <h5><a href="/vp?videoname={{.VidNm}}&nojs=1" class="w3-center w3-button w3-round-xxlarge w3-mobile">Click Here
+        <h5><a href="/vp?videoname={{.VidNm}}&nojs=1" class="w3-center w3-button w3-round-xxlarge w3-mobile ">Click Here
                 for no JS (Low res) video</a></h5>
     </div>
     <footer class="w3-container w3-blue w3-responsive">
