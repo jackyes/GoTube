@@ -149,12 +149,12 @@ func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/vp", handleVP)
 	http.HandleFunc("/Send", handleSendVideo)
-	http.HandleFunc("/", http.HandlerFunc(listfolderhandler))
+	http.HandleFunc("/", http.HandlerFunc(listFolderHandler))
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(staticPath))))
 	http.Handle("/converted/", http.StripPrefix("/converted", http.FileServer(http.Dir("./converted"))))
 	http.HandleFunc("/favicon.ico", http.HandlerFunc(faviconHandler))
-	http.HandleFunc("/lst", listfolderhandler)
-	http.HandleFunc("/queque", quequesize)
+	http.HandleFunc("/lst", listFolderHandler)
+	http.HandleFunc("/queque", quequeSize)
 	if AppConfig.EnableTLS {
 		go func() {
 			err := http.ListenAndServeTLS(AppConfig.BindtoAdress+":"+AppConfig.ServerPortTLS, AppConfig.CertPathCrt, AppConfig.CertPathKey, nil)
@@ -175,14 +175,14 @@ func faviconHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, faviconPath)
 }
 
-func quequesize(w http.ResponseWriter, r *http.Request) {
+func quequeSize(w http.ResponseWriter, r *http.Request) {
 	p := &PageQueque{
 		QuequeSize: quequelen,
 	}
 	renderTemplate(w, "queque", p)
 }
 
-func listfolderhandler(w http.ResponseWriter, r *http.Request) {
+func listFolderHandler(w http.ResponseWriter, r *http.Request) {
 	pageNum, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil || pageNum < 1 {
 		pageNum = 1
@@ -192,7 +192,7 @@ func listfolderhandler(w http.ResponseWriter, r *http.Request) {
 
 	folders, err := listFolders(dirPath, pageNum)
 	if err != nil {
-		senderror(w, r, err.Error())
+		sendError(w, r, err.Error())
 		return
 	}
 
@@ -220,13 +220,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	if AppConfig.AllowUploadWithPsw && !verifyPassword(username, password) {
 		time.Sleep(5000)
-		senderror(w, r, "Wrong password")
+		sendError(w, r, "Wrong password")
 		return
 	}
 
 	var errormsg string
 	if err != nil {
-		senderror(w, r, err.Error())
+		sendError(w, r, err.Error())
 		return
 	}
 	defer file.Close()
@@ -245,7 +245,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if errormsg != "" {
-		senderror(w, r, errormsg)
+		sendError(w, r, errormsg)
 		return
 	}
 
@@ -255,13 +255,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the file already exists
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		errormsg = "File already exists: " + filename
-		senderror(w, r, errormsg)
+		sendError(w, r, errormsg)
 		return
 	}
 
 	out, err := os.Create(filePath)
 	if err != nil {
-		senderror(w, r, err.Error())
+		sendError(w, r, err.Error())
 		return
 	}
 	defer out.Close()
@@ -270,7 +270,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, file)
 	if err != nil {
-		senderror(w, r, err.Error())
+		sendError(w, r, err.Error())
 		return
 	}
 
@@ -461,7 +461,7 @@ func handleVP(w http.ResponseWriter, r *http.Request) {
 		renderTemplate(w, "vp", p)
 		return
 	}
-	senderror(w, r, "Invalid file name only allowed A-Z,a-z,0-9,-,_ or it'slonger than "+strconv.Itoa(AppConfig.MaxVideoNameLen)+" characters")
+	sendError(w, r, "Invalid file name only allowed A-Z,a-z,0-9,-,_ or it'slonger than "+strconv.Itoa(AppConfig.MaxVideoNameLen)+" characters")
 }
 
 func deleteOLD() {
@@ -472,7 +472,7 @@ func deleteOLD() {
 	}
 }
 
-func deleteOldFiles(folderPath string, DaysOld int) {
+func deleteOldFiles(folderPath string, daysOld int) {
 	files, err := ioutil.ReadDir(folderPath)
 	if err != nil {
 		fmt.Println(err)
@@ -480,14 +480,15 @@ func deleteOldFiles(folderPath string, DaysOld int) {
 	}
 
 	for _, file := range files {
+		filePath := filepath.Join(folderPath, file.Name())
+
 		if file.IsDir() {
-			deleteOldFiles(folderPath+"/"+file.Name(), DaysOld)
+			deleteOldFiles(filePath, daysOld)
 			continue
 		}
 
-		if time.Since(file.ModTime()).Hours()/24 >= float64(DaysOld) {
-			err := os.Remove(folderPath + "/" + file.Name())
-			if err != nil {
+		if time.Since(file.ModTime()).Hours()/24 >= float64(daysOld) {
+			if err := os.Remove(filePath); err != nil {
 				fmt.Println(err)
 				return
 			}
@@ -496,7 +497,8 @@ func deleteOldFiles(folderPath string, DaysOld int) {
 	}
 }
 
-func senderror(w http.ResponseWriter, r *http.Request, errormsg string) {
+
+func sendError(w http.ResponseWriter, r *http.Request, errormsg string) {
 	p := &PageErr{
 		ErrMsg: errormsg,
 	}
@@ -557,15 +559,12 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
 	}
 }
 
-func verifyPassword(username string, password string) bool {
+func verifyPassword(username, password string) bool {
 	// TODO: Query the database to retrieve the password hash for the specified username
 	hashedPassword := AppConfig.Psw
-
 	// Check if the entered password matches the hash of the password in the database
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		return false
-	}
-	return true
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return err == nil
 }
 
 func (f folderInfos) Len() int {
