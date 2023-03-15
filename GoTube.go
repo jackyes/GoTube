@@ -253,13 +253,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	filenamenoext := strings.TrimSuffix(filename, extension)
 	filePath := filepath.Join(AppConfig.UploadPath, filename)
 	// Check if the file already exists
-	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Clean(filePath)); !os.IsNotExist(err) {
 		errormsg = "File already exists: " + filename
 		sendError(w, r, errormsg)
 		return
 	}
 
-	out, err := os.Create(filePath)
+	out, err := os.Create(filepath.Clean(filePath))
 	if err != nil {
 		sendError(w, r, err.Error())
 		return
@@ -344,7 +344,7 @@ func convertVideo(videoQuality chan VideoParams) {
 		dashmap := "-dash 2000 -frag 2000 -rap -profile onDemand -out "
 		mpdinuput := " " + outputPath + "/high_" + params.videoName + ".mp4#video " + outputPath + "/med_" + params.videoName + ".mp4#video " + outputPath + "/low_" + params.videoName + ".mp4#video "
 		noAudioFilePath := filepath.Join(outputPath, params.videoName+"noaudio.txt")
-		if _, err := os.Stat(noAudioFilePath); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Clean(noAudioFilePath)); os.IsNotExist(err) {
 			mpdinuput = mpdinuput + outputPath + "/audio_" + params.videoName + ".mp4#audio "
 		}
 		input := "MP4Box " + dashmap + params.ConvertPath + mpdinuput
