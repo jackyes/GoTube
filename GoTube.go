@@ -287,7 +287,7 @@ func StartconvertVideo(filePath, ConvertPath, filenamenoext string) {
 	convertedBasePath := filepath.Join(ConvertPath, filenamenoext)
 	dirPath := filepath.Join(ConvertPath, filenamenoext)
 
-	err := os.Mkdir(dirPath, 0755)
+	err := os.Mkdir(filepath.Clean(dirPath), 0755)
 	if err != nil {
 		fmt.Println(err)
 		return
