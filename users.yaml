@@ -1,0 +1,8 @@
+#Default password: GoTube
+#To change the default password use "mkpasswd -m bcrypt -R 10 <new_password>" and insert the output in password field.
+#Then use <new_password> to login on Web UI
+- username: admin
+  password: $2b$10$RZB/JTwEtyXw39IslRocf.VYg5D755axAqZcrZfkghcJd9S0LqCsS
+
+#- username: user1
+#  password: $2b$10$RZB/JTwEtyXw39IslRocf.VYg5D755axAqZcrZfkghcJd9S0LqCsS
