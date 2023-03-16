@@ -8,7 +8,7 @@
   <body>
   <div class="w3-container w3-blue w3-bottombar ">
       <header class="w3-container w3-blue w3-responsive">
-             <h1 class="w3-center">GoTube<img src="./static/GoTube32x32.png" alt="GoTube Logo"></h1>
+             <h1 class="w3-center">GoTube<img src="./static/GoTube32x32.png"></h1>
       </header>
   </div>
 
@@ -17,6 +17,7 @@
   <a href="/lst" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Video List</a>
   <a href="/Send" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Upload Video</a>
   <a href="/queque" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Processing Queque status</a>
+  <a href="/editconfig" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Admin Panel</a>
 </div>
       <div class="w3-container w3-responsive w3-center">
         <video class="w3-video w3-center" poster="/converted/{{.VidNm}}/output.jpeg" style="width: 100%; height: auto; max-width: 800px; max-height: 600px;" id="videoPlayer" src="/converted/{{.VidNm}}/low_{{.VidNm}}_audio.webm"  controls type="video/webm"></video>

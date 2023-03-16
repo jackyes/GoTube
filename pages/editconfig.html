@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Error!</title>
+    <title>Admin Panel</title>
     <link rel="stylesheet" href="./static/w3.css">
   </head>
   <body>
@@ -20,7 +20,14 @@
   <a href="/editconfig" class="w3-bar-item w3-button w3-round-xxlarge w3-mobile">Admin Panel</a>
 </div>
       <div class="w3-container w3-responsive">
-        <h2>{{.ErrMsg}}</h2>
+      	<h1>Edit Configuration:</h1>
+	<form method="POST" action="/save-config">
+		{{ range $key, $value := . }}
+			<label for="{{ $key }}">{{ $key }}:</label>
+			<input class="w3-input" type="text" id="{{ $key }}" name="{{ $key }}" value="{{ $value }}"><br><br>
+		{{ end }}
+		<button class="w3-button w3-blue" type="submit">Save</button>
+	</form>
       </div>
       <footer class="w3-container w3-blue w3-responsive">
         <h5> </h5>
