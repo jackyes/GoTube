@@ -572,7 +572,7 @@ func convertVideo(videoQuality chan VideoParams) {
 			if err != nil {
 				fmt.Println(err)
 				noAudioFilePath := filepath.Join(AppConfig.ConvertPath, params.videoName, params.videoName+"noaudio.txt")
-				file, err := os.Create(noAudioFilePath)
+				file, err := os.Create(filepath.Clean(noAudioFilePath))
 				if err != nil {
 					fmt.Println(err)
 					return
@@ -642,7 +642,7 @@ func deleteOLD() {
 }
 
 func deleteOldFiles(folderPath string, daysOld int) {
-	files, err := ioutil.ReadDir(folderPath)
+	files, err := ioutil.ReadDir(filepath.Clean(folderPath))
 	if err != nil {
 		fmt.Println(err)
 		return
