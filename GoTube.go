@@ -657,7 +657,7 @@ func deleteOldFiles(folderPath string, daysOld int) {
 		}
 
 		if time.Since(file.ModTime()).Hours()/24 >= float64(daysOld) {
-			if err := os.Remove(filePath); err != nil {
+			if err := os.Remove(filepath.Clean(filePath)); err != nil {
 				fmt.Println(err)
 				return
 			}
