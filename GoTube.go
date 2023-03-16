@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -48,7 +51,6 @@ type Cfg struct {
 	ConvertPath        string `yaml:"ConvertPath"`
 	CheckOldEvery      string `yaml:"CheckOldEvery"`
 	AllowUploadWithPsw bool   `yaml:"AllowUploadWithPsw"`
-	Psw                string `yaml:"Psw"`
 	NrOfCoreVideoConv  string `yaml:"NrOfCoreVideoConv"`
 	VideoConvPreset    string `yaml:"VideoConvPreset"`
 }
@@ -74,15 +76,19 @@ var (
 	templatevpnojs      = template.Must(template.ParseFiles("pages/vpnojs.html"))
 	templateerr         = template.Must(template.ParseFiles("pages/error.html"))
 	templatesndfile     = template.Must(template.ParseFiles("pages/sendfile.html"))
+	templateConfig      = template.Must(template.ParseFiles("pages/editconfig.html"))
 	videoQuality        = make(chan VideoParams)
 	channelOpen         = false
+	users           []user
+	sessions        = make(map[string]bool)
 )
 
 const (
-	configPath   = "./config.yaml"
-	staticPath   = "./static"
-	faviconPath  = "./static/favicon.ico"
-	sendfilePath = "./static/sendfile.html"
+	configPath      = "./config.yaml"
+	staticPath      = "./static"
+	faviconPath     = "./static/favicon.ico"
+	sendfilePath    = "./static/sendfile.html"
+	sessionIDLength = 32
 )
 
 type VideoParams struct {
@@ -97,6 +103,11 @@ type VideoParams struct {
 	creatempd    bool
 	videoName    string
 	createThunb  bool
+}
+
+type user struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type PageList struct {
@@ -134,7 +145,17 @@ type PageSndFile struct {
 
 func main() {
 	ReadConfig()
+	// Read YAML user file
+	data, err := ioutil.ReadFile("users.yaml")
+	if err != nil {
+		panic(err)
+	}
 
+	// Parse YAML user file
+	err = yaml.Unmarshal(data, &users)
+	if err != nil {
+		panic(err)
+	}
 	if AppConfig.EnableFDP {
 		go deleteOLD()
 	}
@@ -155,6 +176,9 @@ func main() {
 	http.HandleFunc("/favicon.ico", http.HandlerFunc(faviconHandler))
 	http.HandleFunc("/lst", listFolderHandler)
 	http.HandleFunc("/queque", quequeSize)
+	http.HandleFunc("/editconfig", editConfigHandler)
+	http.HandleFunc("/save-config", saveConfigHandler)
+	http.HandleFunc("/auth", authHandler)
 	if AppConfig.EnableTLS {
 		go func() {
 			err := http.ListenAndServeTLS(AppConfig.BindtoAdress+":"+AppConfig.ServerPortTLS, AppConfig.CertPathCrt, AppConfig.CertPathKey, nil)
@@ -169,6 +193,174 @@ func main() {
 			fmt.Println(err)
 		}
 	}
+}
+
+func authHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is already logged in
+	if isAuthenticated(r) {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Extract the credentials from the Authorization header.
+	username, password, ok := r.BasicAuth()
+
+	// If credentials were not provided, request authentication
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Look up the corresponding user
+	for _, u := range users {
+		if u.Username == username {
+			// Verify the password
+			err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+			if err == nil {
+				// Authentication succeeded: set the cookie and redirect to the welcome page
+				sessionID := generateSessionID()
+				setAuthCookie(w, sessionID)
+				referer := r.Header.Get("Referer")
+				if referer == "" {
+					// Fallback to a default URL if no referer is provided
+					referer = "/"
+				}
+				http.Redirect(w, r, referer, http.StatusSeeOther)
+				return
+			}
+		}
+	}
+
+	// If the user is not found or the password is incorrect, deny authentication
+	w.WriteHeader(http.StatusUnauthorized)
+}
+
+func editConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if !isAuthenticated(r) {
+		http.Redirect(w, r, "/auth", http.StatusSeeOther)
+		return
+	}
+	configMap := structToMap(&AppConfig)
+	if err := templateConfig.Execute(w, configMap); err != nil {
+		http.Error(w, "Errore durante la generazione del template", http.StatusInternalServerError)
+		return
+	}
+}
+
+func structToMap(config *Cfg) map[string]interface{} {
+	jsonData, _ := json.Marshal(config)
+	var configMap map[string]interface{}
+	json.Unmarshal(jsonData, &configMap)
+
+	// Convert MaxUploadSize to a normal string representation
+	configMap["MaxUploadSize"] = strconv.FormatInt(config.MaxUploadSize, 10)
+
+	return configMap
+}
+
+func saveConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if !isAuthenticated(r) {
+		http.Redirect(w, r, "/auth", http.StatusSeeOther)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Error while processing the form", http.StatusBadRequest)
+		return
+	}
+
+	configMap := make(map[string]interface{})
+	for key, values := range r.PostForm {
+		value := values[0]
+		configMap[key] = value
+	}
+
+	config := mapToStruct(configMap)
+	if err := saveConfig("config.yaml", config); err != nil {
+		http.Error(w, "Error while saving the configuration file", http.StatusInternalServerError)
+		return
+	}
+	AppConfig = *config
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func saveConfig(configPath string, config *Cfg) error {
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	err = ioutil.WriteFile(configPath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+func mapToStruct(configMap map[string]interface{}) *Cfg {
+	config := &Cfg{}
+	for key, value := range configMap {
+		switch key {
+		case "EnableTLS":
+			config.EnableTLS, _ = strconv.ParseBool(value.(string))
+		case "EnableNoTLS":
+			config.EnableNoTLS, _ = strconv.ParseBool(value.(string))
+		case "MaxUploadSize":
+			config.MaxUploadSize, _ = strconv.ParseInt(value.(string), 10, 64)
+		case "DaysOld":
+			config.DaysOld, _ = strconv.Atoi(value.(string))
+		case "ServerPortTLS":
+			config.ServerPortTLS = value.(string)
+		case "ServerPort":
+			config.ServerPort = value.(string)
+		case "CertPathCrt":
+			config.CertPathCrt = value.(string)
+		case "CertPathKey":
+			config.CertPathKey = value.(string)
+		case "BindtoAdress":
+			config.BindtoAdress = value.(string)
+		case "MaxVideosPerHour":
+			config.MaxVideosPerHour, _ = strconv.Atoi(value.(string))
+		case "MaxVideoNameLen":
+			config.MaxVideoNameLen, _ = strconv.Atoi(value.(string))
+		case "VideoResLow":
+			config.VideoResLow = value.(string)
+		case "VideoResMed":
+			config.VideoResMed = value.(string)
+		case "VideoResHigh":
+			config.VideoResHigh = value.(string)
+		case "BitRateLow":
+			config.BitRateLow = value.(string)
+		case "BitRateMed":
+			config.BitRateMed = value.(string)
+		case "BitRateHigh":
+			config.BitRateHigh = value.(string)
+		case "EnableFDP":
+			config.EnableFDP, _ = strconv.ParseBool(value.(string))
+		case "EnablePHL":
+			config.EnablePHL, _ = strconv.ParseBool(value.(string))
+		case "UploadPath":
+			config.UploadPath = value.(string)
+		case "ConvertPath":
+			config.ConvertPath = value.(string)
+		case "CheckOldEvery":
+			config.CheckOldEvery = value.(string)
+		case "AllowUploadWithPsw":
+			config.AllowUploadWithPsw, _ = strconv.ParseBool(value.(string))
+		case "NrOfCoreVideoConv":
+			config.NrOfCoreVideoConv = value.(string)
+		case "DelVidAftUpl":
+			config.DelVidAftUpl, _ = strconv.ParseBool(value.(string))
+		case "VideoPerPage":
+			config.VideoPerPage, _ = strconv.Atoi(value.(string))
+		case "VideoConvPreset":
+			config.VideoConvPreset = value.(string)
+		case "AllowEmbedded":
+			config.AllowEmbedded, _ = strconv.ParseBool(value.(string))
+		}
+	}
+	return config
 }
 
 func faviconHandler(w http.ResponseWriter, r *http.Request) {
@@ -214,15 +406,13 @@ func listFolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	file, header, err := r.FormFile("video")
-	username := r.FormValue("username")
-	password := r.FormValue("password")
-
-	if AppConfig.AllowUploadWithPsw && !verifyPassword(username, password) {
-		time.Sleep(5000)
-		sendError(w, r, "Wrong password")
-		return
+	if AppConfig.AllowUploadWithPsw {
+		if !isAuthenticated(r) {
+			http.Redirect(w, r, "/auth", http.StatusSeeOther)
+			return
+		}
 	}
+	file, header, err := r.FormFile("video")
 
 	var errormsg string
 	if err != nil {
@@ -368,7 +558,7 @@ func convertVideo(videoQuality chan VideoParams) {
 		}
 		quequelen--
 	}
-	
+
 	for params := range videoQuality {
 		if params.audio {
 			cmd := exec.Command("/usr/bin/ffmpeg", "-i", params.videoPath, "-map_metadata", "-2", "-threads", AppConfig.NrOfCoreVideoConv, "-c:v", "libvpx-vp9", "-b:v", params.quality, "-vf", "scale="+params.width+":"+params.height, params.ConvertPath)
@@ -401,6 +591,10 @@ func convertVideo(videoQuality chan VideoParams) {
 }
 
 func handleSendVideo(w http.ResponseWriter, r *http.Request) {
+	if !isAuthenticated(r) {
+		http.Redirect(w, r, "/auth", http.StatusSeeOther)
+		return
+	}
 	p := &PageSndFile{
 		UseAuth: AppConfig.AllowUploadWithPsw,
 	}
@@ -585,4 +779,70 @@ func listFolders(dirPath string, pageNum int) ([]folderInfo, error) {
 	}
 
 	return infos[startIndex:endIndex], nil
+}
+
+// Generate a random session ID of length sessionIDLength
+func generateSessionID() string {
+	// Create a byte buffer of length sessionIDLength
+	b := make([]byte, sessionIDLength)
+
+	// Read sessionIDLength bytes from Go's random number generator
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
+
+	// Encode the bytes in base64
+	s := base64.URLEncoding.EncodeToString(b)
+
+	return s
+}
+
+// Remove the authentication cookie from the HTTP response
+func clearAuthCookie(w http.ResponseWriter) {
+	cookie := &http.Cookie{
+		Name:     "auth",
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   -1,
+	}
+	http.SetCookie(w, cookie)
+	delete(sessions, getAuthVal(&http.Request{}))
+}
+
+func getAuthVal(r *http.Request) string {
+	c, err := r.Cookie("auth")
+	if err != nil {
+		return ""
+	}
+	return c.Value
+}
+
+// Set an authentication cookie with the name "auth" and the specified value
+func setAuthCookie(w http.ResponseWriter, value string) {
+	cookie := &http.Cookie{
+		Name:     "auth",
+		Value:    value,
+		HttpOnly: true,
+		Path:     "/",
+	}
+	http.SetCookie(w, cookie)
+	sessions[value] = true
+}
+
+// Returns true if the user is authenticated, otherwise false
+func isAuthenticated(r *http.Request) bool {
+	c, err := r.Cookie("auth")
+	if err != nil {
+		return false
+	}
+	_, ok := sessions[c.Value]
+	return ok
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Remove the authentication cookie and redirect to the login page
+	clearAuthCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
