@@ -20,7 +20,7 @@ This is a simple video streaming server implemented in Go. The server is designe
 
 
 ## Configuration
-
+The admin username/password are stored in a YAML file (users.yaml).
 The server's configuration is stored in a YAML file (config.yaml), which can be modified to fit the user's needs. The following options are available:
 
     EnableTLS: Enable/disable TLS support
@@ -44,8 +44,7 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     CrfHigh: High video quality
     UploadPath: Path to the uploaded file directory
     ConvertPath: Path to the converted video directory
-    AllowUploadWithPsw: Allow video upload only with password
-    Psw: Password for video upload. Generate With "mkpasswd -m bcrypt -R 10 <password>"
+    AllowUploadWithPsw: Allow video upload only with password. See file users.yaml to set username/password
     NrOfCoreVideoConv: Number of threads used for video conversion
     DelVidAftUpl: Delete or keep original video after conversion
     VideoPerPage: Number of displayed video per page in Video list
