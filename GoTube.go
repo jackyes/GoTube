@@ -727,14 +727,6 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
 	}
 }
 
-func verifyPassword(username, password string) bool {
-	// TODO: Query the database to retrieve the password hash for the specified username
-	hashedPassword := AppConfig.Psw
-	// Check if the entered password matches the hash of the password in the database
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	return err == nil
-}
-
 func (f folderInfos) Len() int {
 	return len(f)
 }
