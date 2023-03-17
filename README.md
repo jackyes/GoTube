@@ -58,6 +58,7 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
 To get started, you need to have Go installed on your machine. Then, you can clone the repository to your local machine and run the server.  
 
     Modify the config.yaml file to fit your needs
+    Modify users.yaml
     Run the code with the following command: go run main.go
     Access the file upload page at http://<server-ip>:<port>/ or https://<server-ip>:<port>/ (if TLS is enabled)
     
