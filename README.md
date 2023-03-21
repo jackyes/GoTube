@@ -16,8 +16,8 @@ This is a simple video streaming server implemented in Go. The server is designe
     Video conversion with customizable resolution and quality settings
     Removal of metadata to enhance the privacy of uploaded videos.
     Easy sharing on other website
-    Can limit video upload to admins or admins/users
-    Can limit video view to users
+    Limit video upload to admins or admins/users
+    Limit video view to users
     
 
 
