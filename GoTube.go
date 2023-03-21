@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,34 +28,36 @@ import (
 )
 
 type Cfg struct {
-	EnableTLS          bool   `yaml:"EnableTLS"`
-	EnableNoTLS        bool   `yaml:"EnableNoTLS"`
-	EnableFDP          bool   `yaml:"EnableFDP"`
-	EnablePHL          bool   `yaml:"EnablePHL"`
-	AllowEmbedded      bool   `yaml:"AllowEmbedded"`
-	MaxUploadSize      int64  `yaml:"MaxUploadSize"`
-	DaysOld            int    `yaml:"DaysOld"`
-	DelVidAftUpl       bool   `yaml:"DelVidAftUpl"`
-	CertPathCrt        string `yaml:"CertPathCrt"`
-	CertPathKey        string `yaml:"CertPathKey"`
-	ServerPort         string `yaml:"ServerPort"`
-	ServerPortTLS      string `yaml:"ServerPortTLS"`
-	BindtoAdress       string `yaml:"BindtoAdress"`
-	MaxVideosPerHour   int    `yaml:"MaxVideosPerHour"`
-	VideoPerPage       int    `yaml:"VideoPerPage"`
-	MaxVideoNameLen    int    `yaml:"MaxVideoNameLen"`
-	VideoResLow        string `yaml:"VideoResLow"`
-	VideoResMed        string `yaml:"VideoResMed"`
-	VideoResHigh       string `yaml:"VideoResHigh"`
-	BitRateLow         string `yaml:"BitRateLow"`
-	BitRateMed         string `yaml:"BitRateMed"`
-	BitRateHigh        string `yaml:"BitRateHigh"`
-	UploadPath         string `yaml:"UploadPath"`
-	ConvertPath        string `yaml:"ConvertPath"`
-	CheckOldEvery      string `yaml:"CheckOldEvery"`
-	AllowUploadWithPsw bool   `yaml:"AllowUploadWithPsw"`
-	NrOfCoreVideoConv  string `yaml:"NrOfCoreVideoConv"`
-	VideoConvPreset    string `yaml:"VideoConvPreset"`
+	EnableTLS                 bool   `yaml:"EnableTLS"`
+	EnableNoTLS               bool   `yaml:"EnableNoTLS"`
+	EnableFDP                 bool   `yaml:"EnableFDP"`
+	EnablePHL                 bool   `yaml:"EnablePHL"`
+	AllowEmbedded             bool   `yaml:"AllowEmbedded"`
+	MaxUploadSize             int64  `yaml:"MaxUploadSize"`
+	DaysOld                   int    `yaml:"DaysOld"`
+	DelVidAftUpl              bool   `yaml:"DelVidAftUpl"`
+	CertPathCrt               string `yaml:"CertPathCrt"`
+	CertPathKey               string `yaml:"CertPathKey"`
+	ServerPort                string `yaml:"ServerPort"`
+	ServerPortTLS             string `yaml:"ServerPortTLS"`
+	BindtoAdress              string `yaml:"BindtoAdress"`
+	MaxVideosPerHour          int    `yaml:"MaxVideosPerHour"`
+	VideoPerPage              int    `yaml:"VideoPerPage"`
+	MaxVideoNameLen           int    `yaml:"MaxVideoNameLen"`
+	VideoResLow               string `yaml:"VideoResLow"`
+	VideoResMed               string `yaml:"VideoResMed"`
+	VideoResHigh              string `yaml:"VideoResHigh"`
+	BitRateLow                string `yaml:"BitRateLow"`
+	BitRateMed                string `yaml:"BitRateMed"`
+	BitRateHigh               string `yaml:"BitRateHigh"`
+	UploadPath                string `yaml:"UploadPath"`
+	ConvertPath               string `yaml:"ConvertPath"`
+	CheckOldEvery             string `yaml:"CheckOldEvery"`
+	AllowUploadOnlyFromUsers  bool   `yaml:"AllowUploadOnlyFromUsers"`
+	VideoOnlyForUsers         bool   `yaml:"VideoOnlyForUsers"`
+	NrOfCoreVideoConv         string `yaml:"NrOfCoreVideoConv"`
+	VideoConvPreset           string `yaml:"VideoConvPreset"`
+	AllowUploadOnlyFromAdmins bool   `yaml:"AllowUploadOnlyFromAdmins"`
 }
 
 type folderInfo struct {
@@ -79,8 +84,9 @@ var (
 	templateConfig      = template.Must(template.ParseFiles("pages/editconfig.html"))
 	videoQuality        = make(chan VideoParams)
 	channelOpen         = false
-	users           []user
-	sessions        = make(map[string]bool)
+	users           []User
+	cookieKeys      [][]byte // Array of secret keys for key rotation
+	currentKeyIndex int      // Index of the current secret key
 )
 
 const (
@@ -105,9 +111,10 @@ type VideoParams struct {
 	createThunb  bool
 }
 
-type user struct {
+type User struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+	Role     string `yaml:"role"`
 }
 
 type PageList struct {
@@ -156,6 +163,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	for i := 0; i < 3; i++ { // Generates 3 secret keys for key rotation
+		key := make([]byte, 32)
+		if _, err := rand.Read(key); err != nil {
+			panic(err)
+		}
+		cookieKeys = append(cookieKeys, key)
+	}
+	currentKeyIndex = 0
+
 	if AppConfig.EnableFDP {
 		go deleteOLD()
 	}
@@ -171,14 +188,32 @@ func main() {
 	http.HandleFunc("/vp", handleVP)
 	http.HandleFunc("/Send", handleSendVideo)
 	http.HandleFunc("/", http.HandlerFunc(listFolderHandler))
-	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(staticPath))))
-	http.Handle("/converted/", http.StripPrefix("/converted", http.FileServer(http.Dir("./converted"))))
+	http.Handle("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if AppConfig.VideoOnlyForUsers {
+			if !adminAuthenticated(r) && !userAuthenticated(r) {
+				http.Redirect(w, r, "/auth", http.StatusSeeOther)
+				return
+			}
+		}
+		http.StripPrefix("/static", http.FileServer(http.Dir(staticPath))).ServeHTTP(w, r)
+	}))
+
+	http.Handle("/converted/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if AppConfig.VideoOnlyForUsers {
+			if !adminAuthenticated(r) && !userAuthenticated(r) {
+				http.Redirect(w, r, "/auth", http.StatusSeeOther)
+				return
+			}
+		}
+		http.StripPrefix("/converted", http.FileServer(http.Dir("./converted"))).ServeHTTP(w, r)
+	}))
+
 	http.HandleFunc("/favicon.ico", http.HandlerFunc(faviconHandler))
 	http.HandleFunc("/lst", listFolderHandler)
 	http.HandleFunc("/queque", quequeSize)
 	http.HandleFunc("/editconfig", editConfigHandler)
 	http.HandleFunc("/save-config", saveConfigHandler)
-	http.HandleFunc("/auth", authHandler)
+	http.HandleFunc("/auth", loginHandler)
 	if AppConfig.EnableTLS {
 		go func() {
 			err := http.ListenAndServeTLS(AppConfig.BindtoAdress+":"+AppConfig.ServerPortTLS, AppConfig.CertPathCrt, AppConfig.CertPathKey, nil)
@@ -195,55 +230,46 @@ func main() {
 	}
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	// Check if the user is already logged in
-	if isAuthenticated(r) {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	// Extract the credentials from the Authorization header.
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	username, password, ok := r.BasicAuth()
-
-	// If credentials were not provided, request authentication
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
-	// Look up the corresponding user
-	for _, u := range users {
-		if u.Username == username {
-			// Verify the password
-			err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-			if err == nil {
-				// Authentication succeeded: set the cookie and redirect to the welcome page
-				sessionID := generateSessionID()
-				setAuthCookie(w, sessionID)
-				referer := r.Header.Get("Referer")
-				if referer == "" {
-					// Fallback to a default URL if no referer is provided
-					referer = "/"
-				}
-				http.Redirect(w, r, referer, http.StatusSeeOther)
-				return
-			}
+	// Find the user with the given username
+	var currentUser User
+	for _, user := range users {
+		if user.Username == username {
+			currentUser = user
+			break
 		}
 	}
-
-	// If the user is not found or the password is incorrect, deny authentication
-	w.WriteHeader(http.StatusUnauthorized)
+	// Verify the password
+	err := bcrypt.CompareHashAndPassword([]byte(currentUser.Password), []byte(password))
+	if err == nil {
+		// Authentication succeeded: set the cookie and redirect to the welcome page
+		expiration := time.Now().Add(24 * time.Hour)
+		value := currentUser.Username + "|" + currentUser.Role
+		cookie := createSignedCookie("auth", value, expiration)
+		http.SetCookie(w, cookie)
+		// Redirect the user to the home page
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	// Passwords don't match, show an error message
+	http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 }
 
 func editConfigHandler(w http.ResponseWriter, r *http.Request) {
-	if !isAuthenticated(r) {
+	if !adminAuthenticated(r) {
 		http.Redirect(w, r, "/auth", http.StatusSeeOther)
 		return
 	}
+
 	configMap := structToMap(&AppConfig)
 	if err := templateConfig.Execute(w, configMap); err != nil {
-		http.Error(w, "Errore durante la generazione del template", http.StatusInternalServerError)
+		http.Error(w, "Error during template generation", http.StatusInternalServerError)
 		return
 	}
 }
@@ -260,10 +286,11 @@ func structToMap(config *Cfg) map[string]interface{} {
 }
 
 func saveConfigHandler(w http.ResponseWriter, r *http.Request) {
-	if !isAuthenticated(r) {
+	if !adminAuthenticated(r) {
 		http.Redirect(w, r, "/auth", http.StatusSeeOther)
 		return
 	}
+
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Error while processing the form", http.StatusBadRequest)
 		return
@@ -346,8 +373,12 @@ func mapToStruct(configMap map[string]interface{}) *Cfg {
 			config.ConvertPath = value.(string)
 		case "CheckOldEvery":
 			config.CheckOldEvery = value.(string)
-		case "AllowUploadWithPsw":
-			config.AllowUploadWithPsw, _ = strconv.ParseBool(value.(string))
+		case "AllowUploadOnlyFromUsers":
+			config.AllowUploadOnlyFromUsers, _ = strconv.ParseBool(value.(string))
+		case "AllowUploadOnlyFromAdmins":
+			config.AllowUploadOnlyFromAdmins, _ = strconv.ParseBool(value.(string))
+		case "VideoOnlyForUsers":
+			config.VideoOnlyForUsers, _ = strconv.ParseBool(value.(string))
 		case "NrOfCoreVideoConv":
 			config.NrOfCoreVideoConv = value.(string)
 		case "DelVidAftUpl":
@@ -374,7 +405,34 @@ func quequeSize(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "queque", p)
 }
 
+func userAuthenticated(r *http.Request) bool {
+	for i := 0; i < len(cookieKeys); i++ {
+		if hasRoleWithKey(r, "user", i) {
+			// The user has the "user" role
+			return true
+		}
+	}
+	// The user does not have the required role
+	return false
+}
+func adminAuthenticated(r *http.Request) bool {
+	for i := 0; i < len(cookieKeys); i++ {
+		if hasRoleWithKey(r, "admin", i) {
+			// The user has the "admin" role
+			return true
+		}
+	}
+	// The user does not have the required role
+	return false
+}
+
 func listFolderHandler(w http.ResponseWriter, r *http.Request) {
+	if AppConfig.VideoOnlyForUsers {
+		if !adminAuthenticated(r) && !userAuthenticated(r) {
+			http.Redirect(w, r, "/auth", http.StatusSeeOther)
+			return
+		}
+	}
 	pageNum, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil || pageNum < 1 {
 		pageNum = 1
@@ -406,8 +464,14 @@ func listFolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	if AppConfig.AllowUploadWithPsw {
-		if !isAuthenticated(r) {
+	if AppConfig.AllowUploadOnlyFromAdmins {
+		if !adminAuthenticated(r) {
+			http.Redirect(w, r, "/auth", http.StatusSeeOther)
+			return
+		}
+	}
+	if AppConfig.AllowUploadOnlyFromUsers {
+		if !adminAuthenticated(r) && !userAuthenticated(r) {
 			http.Redirect(w, r, "/auth", http.StatusSeeOther)
 			return
 		}
@@ -591,18 +655,32 @@ func convertVideo(videoQuality chan VideoParams) {
 }
 
 func handleSendVideo(w http.ResponseWriter, r *http.Request) {
-	if !isAuthenticated(r) {
-		http.Redirect(w, r, "/auth", http.StatusSeeOther)
-		return
+	if AppConfig.AllowUploadOnlyFromAdmins {
+		if !adminAuthenticated(r) {
+			http.Redirect(w, r, "/auth", http.StatusSeeOther)
+			return
+		}
+	}
+	if AppConfig.AllowUploadOnlyFromUsers {
+		if !adminAuthenticated(r) && !userAuthenticated(r) {
+			http.Redirect(w, r, "/auth", http.StatusSeeOther)
+			return
+		}
 	}
 	p := &PageSndFile{
-		UseAuth: AppConfig.AllowUploadWithPsw,
+		UseAuth: AppConfig.AllowUploadOnlyFromUsers, //TODO: REMOVE TEMPLATE, use static page
 	}
 	renderTemplate(w, "sendfile", p)
 	return
 }
 
 func handleVP(w http.ResponseWriter, r *http.Request) {
+	if AppConfig.VideoOnlyForUsers {
+		if !adminAuthenticated(r) && !userAuthenticated(r) {
+			http.Redirect(w, r, "/auth", http.StatusSeeOther)
+			return
+		}
+	}
 	videoname := r.URL.Query().Get("videoname")
 	nojs := r.URL.Query().Get("nojs")
 	emb := r.URL.Query().Get("embedded")
@@ -773,68 +851,115 @@ func listFolders(dirPath string, pageNum int) ([]folderInfo, error) {
 	return infos[startIndex:endIndex], nil
 }
 
-// Generate a random session ID of length sessionIDLength
-func generateSessionID() string {
-	// Create a byte buffer of length sessionIDLength
-	b := make([]byte, sessionIDLength)
-
-	// Read sessionIDLength bytes from Go's random number generator
-	_, err := rand.Read(b)
+func hasRoleWithKey(r *http.Request, role string, keyIndex int) bool {
+	cookie, err := r.Cookie("auth")
 	if err != nil {
-		return ""
-	}
-
-	// Encode the bytes in base64
-	s := base64.URLEncoding.EncodeToString(b)
-
-	return s
-}
-
-// Remove the authentication cookie from the HTTP response
-func clearAuthCookie(w http.ResponseWriter) {
-	cookie := &http.Cookie{
-		Name:     "auth",
-		Value:    "",
-		HttpOnly: true,
-		Path:     "/",
-		MaxAge:   -1,
-	}
-	http.SetCookie(w, cookie)
-	delete(sessions, getAuthVal(&http.Request{}))
-}
-
-func getAuthVal(r *http.Request) string {
-	c, err := r.Cookie("auth")
-	if err != nil {
-		return ""
-	}
-	return c.Value
-}
-
-// Set an authentication cookie with the name "auth" and the specified value
-func setAuthCookie(w http.ResponseWriter, value string) {
-	cookie := &http.Cookie{
-		Name:     "auth",
-		Value:    value,
-		HttpOnly: true,
-		Path:     "/",
-	}
-	http.SetCookie(w, cookie)
-	sessions[value] = true
-}
-
-// Returns true if the user is authenticated, otherwise false
-func isAuthenticated(r *http.Request) bool {
-	c, err := r.Cookie("auth")
-	if err != nil {
+		// Cookie not found, assume the user is not authenticated
 		return false
 	}
-	_, ok := sessions[c.Value]
-	return ok
+
+	value, err := verifySignedCookieWithKey("auth", cookie.Value, cookieKeys[keyIndex])
+	if err != nil {
+		// Invalid cookie signature or format, assume the user is not authenticated
+		return false
+	}
+
+	parts := strings.Split(value, "|")
+	if len(parts) != 2 {
+		fmt.Println("3")
+		// Invalid cookie format, assume the user is not authenticated
+
+		return false
+	}
+
+	username := parts[0]
+	roleValue := parts[1]
+
+	// Verify that the user has the required role
+	for _, user := range users {
+		if user.Username == username && user.Role == roleValue {
+			return user.Role == role
+		}
+	}
+
+	// The user was not found, assume the user is not authenticated
+	return false
 }
 
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Remove the authentication cookie and redirect to the login page
-	clearAuthCookie(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+func createSignedCookie(name, value string, expires time.Time) *http.Cookie {
+	// Select the current cookie key
+	cookieKey := cookieKeys[currentKeyIndex]
+	// Encode the cookie value and sign it with the cookie key
+	cookieValue := value + "|" + expires.Format(time.RFC3339)
+	signature := computeCookieSignature(name, cookieValue, cookieKey)
+
+	cookieValueBase64 := base64.StdEncoding.EncodeToString([]byte(cookieValue))
+	signatureBase64 := base64.StdEncoding.EncodeToString(signature)
+
+	// Create the cookie with the encoded value and signature
+	cookie := &http.Cookie{
+		Name:     name,
+		Value:    cookieValueBase64 + "|" + signatureBase64,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  expires,
+	}
+	return cookie
+}
+
+func verifySignedCookieWithKey(name, value string, key []byte) (string, error) {
+	// Decode the cookie value and signature from base64
+	parts := strings.Split(value, "|")
+	if len(parts) != 2 {
+		return "", errors.New("Invalid cookie format")
+	}
+	cookieValueBase64 := parts[0]
+	signatureBase64 := parts[1]
+	cookieValue, err := base64.StdEncoding.DecodeString(cookieValueBase64)
+	if err != nil {
+		return "", errors.New("Invalid cookie format")
+	}
+
+	signature, err := base64.StdEncoding.DecodeString(signatureBase64)
+	if err != nil {
+		return "", errors.New("Invalid cookie format")
+	}
+
+	// Verify the signature of the cookie using the specified key
+	if !validateCookieSignature(name, string(cookieValue), signature, key) {
+		return "", errors.New("Invalid cookie signature")
+	}
+
+	// Check if the cookie has expired
+	parts = strings.Split(string(cookieValue), "|")
+	if len(parts) != 3 {
+		return "", errors.New("Invalid cookie format")
+	}
+	if err != nil {
+		fmt.Println("Error decoding base64 string:", err)
+		return "", errors.New("Invalid cookie format")
+	}
+	expiration, err := time.Parse(time.RFC3339, string(string(parts[2])))
+	if err != nil {
+		return "", errors.New("Invalid cookie format")
+	}
+	if time.Now().After(expiration) {
+		return "", errors.New("Cookie has expired")
+	}
+	// Return the cookie value
+	return string(parts[0] + "|" + parts[1]), nil
+}
+
+func computeCookieSignature(name, value string, key []byte) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(name))
+	h.Write([]byte("|"))
+	h.Write([]byte(value))
+	return h.Sum(nil)
+}
+
+func validateCookieSignature(name, value string, signature []byte, key []byte) bool {
+	expectedSignature := computeCookieSignature(name, value, key)
+	return hmac.Equal(signature, expectedSignature)
 }
