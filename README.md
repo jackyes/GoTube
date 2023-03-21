@@ -16,6 +16,8 @@ This is a simple video streaming server implemented in Go. The server is designe
     Video conversion with customizable resolution and quality settings
     Removal of metadata to enhance the privacy of uploaded videos.
     Easy sharing on other website
+    Can limit video upload to admins or admins/users
+    Can limit video view to users
     
 
 
@@ -44,7 +46,9 @@ The server's configuration is stored in a YAML file (config.yaml), which can be 
     CrfHigh: High video quality
     UploadPath: Path to the uploaded file directory
     ConvertPath: Path to the converted video directory
-    AllowUploadWithPsw: Allow video upload only with password. See file users.yaml to set username/password
+    AllowUploadOnlyFromUsers: Allow upload only from users and admins
+    AllowUploadOnlyFromAdmins: Allow upload only from users and admins
+    VideoOnlyForUsers: Show video and list only to users and admin
     NrOfCoreVideoConv: Number of threads used for video conversion
     DelVidAftUpl: Delete or keep original video after conversion
     VideoPerPage: Number of displayed video per page in Video list
