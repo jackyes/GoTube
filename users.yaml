@@ -3,6 +3,8 @@
 #Then use <new_password> to login on Web UI
 - username: admin
   password: $2b$10$RZB/JTwEtyXw39IslRocf.VYg5D755axAqZcrZfkghcJd9S0LqCsS
+  role: admin
 
 #- username: user1
 #  password: $2b$10$RZB/JTwEtyXw39IslRocf.VYg5D755axAqZcrZfkghcJd9S0LqCsS
+#  role: user
