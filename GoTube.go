@@ -719,30 +719,34 @@ func deleteOLD() {
 	}
 }
 
-func deleteOldFiles(folderPath string, daysOld int) {
-	files, err := ioutil.ReadDir(filepath.Clean(folderPath))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	for _, file := range files {
-		filePath := filepath.Join(folderPath, file.Name())
-
-		if file.IsDir() {
-			deleteOldFiles(filePath, daysOld)
-			continue
+func deleteOldFiles(folderPath string, daysOld int) error {
+	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
 
-		if time.Since(file.ModTime()).Hours()/24 >= float64(daysOld) {
-			if err := os.Remove(filepath.Clean(filePath)); err != nil {
-				fmt.Println(err)
-				return
+		if info.IsDir() {
+			if time.Since(info.ModTime()).Hours()/24 >= float64(daysOld) {
+				if err := os.RemoveAll(path); err != nil {
+					return err
+				}
+				fmt.Printf("Folder %q deleted.\n", path)
+				return filepath.SkipDir
 			}
-			fmt.Printf("File %s deleted in folder %s.\n", file.Name(), folderPath)
+			return nil
 		}
-	}
+
+		if time.Since(info.ModTime()).Hours()/24 >= float64(daysOld) {
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+			fmt.Printf("File %q deleted in folder %q.\n", info.Name(), folderPath)
+		}
+		return nil
+	})
+	return err
 }
+
 
 func sendError(w http.ResponseWriter, r *http.Request, errormsg string) {
 	p := &PageErr{
