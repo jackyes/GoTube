@@ -595,13 +595,13 @@ func convertVideo(videoQuality chan VideoParams) {
 
 	createMPD := func(params VideoParams) {
 		outputPath := filepath.Join(AppConfig.ConvertPath, params.videoName)
-		dashmap := "-dash 2000 -frag 2000 -rap -profile onDemand -out "
-		mpdinuput := " " + outputPath + "/high_" + params.videoName + ".mp4#video " + outputPath + "/med_" + params.videoName + ".mp4#video " + outputPath + "/low_" + params.videoName + ".mp4#video "
+		dashMap := "-dash 2000 -frag 2000 -rap -profile onDemand -out "
+		mpdInuput := " " + outputPath + "/high_" + params.videoName + ".mp4#video " + outputPath + "/med_" + params.videoName + ".mp4#video " + outputPath + "/low_" + params.videoName + ".mp4#video "
 		noAudioFilePath := filepath.Join(outputPath, params.videoName+"noaudio.txt")
 		if _, err := os.Stat(filepath.Clean(noAudioFilePath)); os.IsNotExist(err) {
-			mpdinuput = mpdinuput + outputPath + "/audio_" + params.videoName + ".mp4#audio "
+			mpdInuput = mpdInuput + outputPath + "/audio_" + params.videoName + ".mp4#audio "
 		}
-		input := "MP4Box " + dashmap + params.ConvertPath + mpdinuput
+		input := "MP4Box " + dashMap + params.ConvertPath + mpdInuput
 		cmd := exec.Command("/bin/sh", "-c", input)
 
 		err := cmd.Run()
