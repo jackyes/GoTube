@@ -122,6 +122,7 @@ type PageList struct {
 	PrevPage  int
 	NextPage  int
 	TotalPage int
+	CanDelete int
 }
 
 type PageQueque struct {
@@ -187,6 +188,7 @@ func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/vp", handleVP)
 	http.HandleFunc("/Send", handleSendVideo)
+	http.HandleFunc("/deleteVideo", handleDeleteVideo)
 	http.HandleFunc("/", http.HandlerFunc(listFolderHandler))
 	http.Handle("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if AppConfig.VideoOnlyForUsers {
@@ -427,37 +429,54 @@ func adminAuthenticated(r *http.Request) bool {
 }
 
 func listFolderHandler(w http.ResponseWriter, r *http.Request) {
-    if AppConfig.VideoOnlyForUsers && !adminAuthenticated(r) && !userAuthenticated(r) {
-        http.Redirect(w, r, "/auth", http.StatusSeeOther)
-        return
-    }
+	if AppConfig.VideoOnlyForUsers && !adminAuthenticated(r) && !userAuthenticated(r) {
+		http.Redirect(w, r, "/auth", http.StatusSeeOther)
+		return
+	}
 
-    pageNum := 1
-    if page, err := strconv.Atoi(r.FormValue("page")); err == nil && page > 0 {
-        pageNum = page
-    }
+	pageNum := 1
+	if page, err := strconv.Atoi(r.FormValue("page")); err == nil && page > 0 {
+		pageNum = page
+	}
 
-    const dirPath = "converted"
-    folders, err := listFolders(dirPath, pageNum)
-    if err != nil {
-        sendError(w, r, err.Error())
-        return
-    }
+	const dirPath = "converted"
+	folders, err := listFolders(dirPath, pageNum)
+	if err != nil {
+		sendError(w, r, err.Error())
+		return
+	}
 
-    data := &PageList{
-        Files:     folders,
-        TotalPage: (len(folders) + (AppConfig.VideoPerPage - 1)) / AppConfig.VideoPerPage,
-    }
+	data := &PageList{
+		Files:     folders,
+		TotalPage: (len(folders) + (AppConfig.VideoPerPage - 1)) / AppConfig.VideoPerPage,
+	}
 
-    if pageNum > 1 {
-        data.PrevPage = pageNum - 1
-    }
+	if pageNum > 1 {
+		data.PrevPage = pageNum - 1
+	}
 
-    if len(folders) == AppConfig.VideoPerPage {
-        data.NextPage = pageNum + 1
-    }
+	if len(folders) == AppConfig.VideoPerPage {
+		data.NextPage = pageNum + 1
+	}
+	if adminAuthenticated(r) {
+		data.CanDelete = 1
+	}
 
-    renderTemplate(w, "filelist", data)
+	renderTemplate(w, "filelist", data)
+}
+
+func handleDeleteVideo(w http.ResponseWriter, r *http.Request) {
+	if !adminAuthenticated(r) {
+		http.Redirect(w, r, "/auth", http.StatusSeeOther)
+		return
+	}
+	videoname := r.URL.Query().Get("videoname")
+	err := os.RemoveAll(filepath.Join(AppConfig.ConvertPath, videoname))
+	if err != nil {
+		sendError(w, r, err.Error())
+		return
+	}
+
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -743,7 +762,6 @@ func deleteOldFiles(folderPath string, daysOld int) error {
 	})
 	return err
 }
-
 
 func sendError(w http.ResponseWriter, r *http.Request, errormsg string) {
 	p := &PageErr{
