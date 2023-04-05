@@ -427,40 +427,37 @@ func adminAuthenticated(r *http.Request) bool {
 }
 
 func listFolderHandler(w http.ResponseWriter, r *http.Request) {
-	if AppConfig.VideoOnlyForUsers {
-		if !adminAuthenticated(r) && !userAuthenticated(r) {
-			http.Redirect(w, r, "/auth", http.StatusSeeOther)
-			return
-		}
-	}
-	pageNum, err := strconv.Atoi(r.FormValue("page"))
-	if err != nil || pageNum < 1 {
-		pageNum = 1
-	}
+    if AppConfig.VideoOnlyForUsers && !adminAuthenticated(r) && !userAuthenticated(r) {
+        http.Redirect(w, r, "/auth", http.StatusSeeOther)
+        return
+    }
 
-	dirPath := "converted"
+    pageNum := 1
+    if page, err := strconv.Atoi(r.FormValue("page")); err == nil && page > 0 {
+        pageNum = page
+    }
 
-	folders, err := listFolders(dirPath, pageNum)
-	if err != nil {
-		sendError(w, r, err.Error())
-		return
-	}
+    const dirPath = "converted"
+    folders, err := listFolders(dirPath, pageNum)
+    if err != nil {
+        sendError(w, r, err.Error())
+        return
+    }
 
-	data := &PageList{
-		Files: folders,
-	}
+    data := &PageList{
+        Files:     folders,
+        TotalPage: (len(folders) + (AppConfig.VideoPerPage - 1)) / AppConfig.VideoPerPage,
+    }
 
-	if pageNum > 1 {
-		data.PrevPage = pageNum - 1
-	}
+    if pageNum > 1 {
+        data.PrevPage = pageNum - 1
+    }
 
-	if len(folders) == AppConfig.VideoPerPage {
-		data.NextPage = pageNum + 1
-	}
+    if len(folders) == AppConfig.VideoPerPage {
+        data.NextPage = pageNum + 1
+    }
 
-	data.TotalPage = (len(folders) + (AppConfig.VideoPerPage - 1)) / AppConfig.VideoPerPage
-
-	renderTemplate(w, "filelist", data)
+    renderTemplate(w, "filelist", data)
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
