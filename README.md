@@ -25,7 +25,7 @@ This is a simple video streaming server implemented in Go. The server is designe
 
 
 ## Configuration
-The admin username/password are stored in a YAML file (users.yaml).  
+The admin and user username/password are stored in a YAML file (users.yaml).  
 The server's configuration is stored in a YAML file (config.yaml), which can be modified to fit the user's needs. The following options are available:
 
     EnableTLS: Enable/disable TLS support
