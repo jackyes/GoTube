@@ -521,15 +521,23 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	extension := path.Ext(filename)
 	filenamenoext := strings.TrimSuffix(filename, extension)
-	filePath := filepath.Join(AppConfig.UploadPath, filename)
+
+	// Sanitize the file path
+	filePath := filepath.Join(AppConfig.UploadPath, filepath.Clean(filename))
+	if !strings.HasPrefix(filePath, AppConfig.UploadPath) {
+		errormsg = "Invalid file name"
+		sendError(w, r, errormsg)
+		return
+	}
+
 	// Check if the file already exists
-	if _, err := os.Stat(filepath.Clean(filePath)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		errormsg = "File already exists: " + filename
 		sendError(w, r, errormsg)
 		return
 	}
 
-	out, err := os.Create(filepath.Clean(filePath))
+	out, err := os.Create(filePath)
 	if err != nil {
 		sendError(w, r, err.Error())
 		return
