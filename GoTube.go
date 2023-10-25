@@ -523,11 +523,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		errormsg = "Can't upload more than" + strconv.Itoa(AppConfig.MaxVideosPerHour) + "videos per hour"
 	}
 
-	if errormsg != "" {
-		sendError(w, r, errormsg)
-		return
-	}
-
 	extension := path.Ext(filename)
 	filenamenoext := strings.TrimSuffix(filename, extension)
 
@@ -542,6 +537,11 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the file already exists
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		errormsg = "File already exists: " + filename
+		sendError(w, r, errormsg)
+		return
+	}
+
+	if errormsg != "" {
 		sendError(w, r, errormsg)
 		return
 	}
@@ -752,6 +752,7 @@ func deleteOLD() {
 	}
 }
 
+// deleteOldFiles removes files and folders within the given folderPath that are older than the specified daysOld.
 func deleteOldFiles(folderPath string, daysOld int) error {
 	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
