@@ -174,16 +174,16 @@ func main() {
 		cookieKeys = append(cookieKeys, key)
 	}
 	currentKeyIndex = 0
-
-	if AppConfig.EnableFDP {
-		go deleteOLD()
-	}
 	d, err := time.ParseDuration(AppConfig.CheckOldEvery)
 	if err != nil {
 		fmt.Println("Error parsing CheckOldEvery from config.yaml. Using default value (1h)", err)
 		d = time.Hour
 	}
 	checkOldEvery = d
+
+	if AppConfig.EnableFDP {
+		go deleteOLD()
+	}
 
 	go resetVideoUploadedCounter()
 	http.HandleFunc("/upload", uploadHandler)
@@ -745,11 +745,22 @@ func handleVP(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteOLD() {
-	for {
-		go deleteOldFiles(AppConfig.UploadPath, AppConfig.DaysOld)
-		go deleteOldFiles(AppConfig.ConvertPath, AppConfig.DaysOld)
-		time.Sleep(checkOldEvery) //wait time before recheck file deletion policies
-	}
+	// Create a ticker to check for old files every `checkOldEvery` seconds
+	ticker := time.NewTicker(checkOldEvery)
+
+	// Start a goroutine to handle the ticker events
+	go func() {
+		for range ticker.C {
+			// Delete old files in the upload path
+			go deleteOldFiles(AppConfig.UploadPath, AppConfig.DaysOld)
+
+			// Delete old files in the convert path
+			go deleteOldFiles(AppConfig.ConvertPath, AppConfig.DaysOld)
+		}
+	}()
+
+	// Wait for the goroutine to finish
+	ticker.Stop()
 }
 
 // deleteOldFiles removes files and folders within the given folderPath that are older than the specified daysOld.
