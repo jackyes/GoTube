@@ -277,9 +277,17 @@ func editConfigHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func structToMap(config *Cfg) map[string]interface{} {
-	jsonData, _ := json.Marshal(config)
+	// Marshal the config struct to JSON
+	jsonData, err := json.Marshal(config)
+	if err != nil {
+	  return nil
+	}
+	// Decode the JSON data into a map
 	var configMap map[string]interface{}
-	json.Unmarshal(jsonData, &configMap)
+	err = json.Unmarshal(jsonData, &configMap)
+	if err != nil {
+	  return nil
+	}
 
 	// Convert MaxUploadSize to a normal string representation
 	configMap["MaxUploadSize"] = strconv.FormatInt(config.MaxUploadSize, 10)
