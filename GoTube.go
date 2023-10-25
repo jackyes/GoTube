@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"text/template"
 	"time"
 
@@ -280,13 +281,13 @@ func structToMap(config *Cfg) map[string]interface{} {
 	// Marshal the config struct to JSON
 	jsonData, err := json.Marshal(config)
 	if err != nil {
-	  return nil
+		return nil
 	}
 	// Decode the JSON data into a map
 	var configMap map[string]interface{}
 	err = json.Unmarshal(jsonData, &configMap)
 	if err != nil {
-	  return nil
+		return nil
 	}
 
 	// Convert MaxUploadSize to a normal string representation
@@ -791,11 +792,18 @@ func isSafeFileName(fileName string) bool {
 }
 
 func resetVideoUploadedCounter() {
-	for {
-		// Reset every h
-		time.Sleep(time.Hour)
-		videosUploaded = 0
-	}
+	// Create an atomic integer to store the counter
+	var videosUploaded atomic.Int64
+
+	// Start a goroutine to reset the counter every hour
+	go func() {
+		for range time.NewTicker(time.Hour).C {
+			videosUploaded.Store(0)
+		}
+	}()
+
+	// Wait for the goroutine to finish
+	time.Sleep(time.Hour)
 }
 
 func ReadConfig() {
