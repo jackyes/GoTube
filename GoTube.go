@@ -260,7 +260,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Passwords don't match, show an error message
-	http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+	sendError(w, r, "Invalid username or password")
 }
 
 func editConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +271,7 @@ func editConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 	configMap := structToMap(&AppConfig)
 	if err := templateConfig.Execute(w, configMap); err != nil {
-		http.Error(w, "Error during template generation", http.StatusInternalServerError)
+		sendError(w, r, "Error during template generation")
 		return
 	}
 }
@@ -302,7 +302,7 @@ func saveConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Error while processing the form", http.StatusBadRequest)
+		sendError(w, r, "Error while processing the form")
 		return
 	}
 
@@ -314,7 +314,7 @@ func saveConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 	config := mapToStruct(configMap)
 	if err := saveConfig("config.yaml", config); err != nil {
-		http.Error(w, "Error while saving the configuration file", http.StatusInternalServerError)
+		sendError(w, r, "Error while saving the configuration file")
 		return
 	}
 	AppConfig = *config
