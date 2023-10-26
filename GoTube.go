@@ -967,7 +967,7 @@ func createSignedCookie(name, value string, expires time.Time) *http.Cookie {
 func verifySignedCookieWithKey(name, value string, key []byte) (string, error) {
 	// Decode the cookie value and signature from base64
 	parts := strings.Split(value, "|")
-	if len(parts) != 2 {
+	if value == "" || len(parts) != 2 {
 		return "", errors.New("Invalid cookie format")
 	}
 	cookieValueBase64 := parts[0]
