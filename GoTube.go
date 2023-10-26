@@ -480,12 +480,13 @@ func handleDeleteVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	videoname := r.URL.Query().Get("videoname")
-	err := os.RemoveAll(filepath.Join(AppConfig.ConvertPath, videoname))
-	if err != nil {
-		sendError(w, r, err.Error())
-		return
+	if isSafeFileName(videoname) {
+		err := os.RemoveAll(filepath.Join(AppConfig.ConvertPath, videoname))
+		if err != nil {
+			sendError(w, r, err.Error())
+			return
+		}
 	}
-
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
