@@ -23,6 +23,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Download Go modules and build the binary
+RUN go get -u -v all
 RUN go mod download && \
     CGO_ENABLED=1 go build -ldflags="-s -w" -o /go/bin/GoTube
 
